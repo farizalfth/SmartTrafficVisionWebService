@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Statistik & Analitik | Smart Traffic Vision</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts - Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+      body {
+        background-color: #000000;
+        color: #e0e0e0;
+        font-family: 'Poppins', sans-serif;
+        padding-top: 70px;
+      }
+
+      /* Navbar */
+      .navbar {
+        background-color: #1a1a1a !important;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+      }
+      .navbar-brand {
+        font-weight: 700;
+        color: #0dcaf0 !important;
+      }
+      .navbar-nav .nav-link {
+        color: #e0e0e0 !important;
+        font-weight: 500;
+        margin-right: 15px;
+      }
+      .navbar-nav .nav-link:hover,
+      .navbar-nav .nav-link.active {
+        color: #0dcaf0 !important;
+      }
+      .btn-outline-light {
+        color: #0dcaf0;
+        border-color: #0dcaf0;
+        font-weight: 600;
+      }
+      .btn-outline-light:hover {
+        background-color: #0dcaf0;
+        color: #1a1a1a;
+      }
+
+      /* Card styles */
+      .chart-card {
+        background-color: #1a1a1a;
+        border: none;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        height: 100%;
+        border: 1px solid #333;
+      }
+      .chart-card h4 {
+        font-weight: 600;
+        color: #0dcaf0; /* Aksen Biru */
+        margin-bottom: 25px;
+        text-align: center;
+      }
+
+      /* Filter Buttons */
+      .btn-filter-group .btn {
+        background-color: #2c2c2c;
+        color: #aaa;
+        border: 1px solid #444;
+        border-radius: 50px; /* Pill shape */
+        margin: 0 5px;
+        padding: 8px 25px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+      }
+      .btn-filter-group .btn.active,
+      .btn-filter-group .btn:hover {
+        background-color: #0dcaf0;
+        color: #000;
+        border-color: #0dcaf0;
+        font-weight: 600;
+      }
+
+      /* Form Controls */
+      .form-select {
+          background-color: #2c2c2c;
+          border: 1px solid #444;
+          color: white;
+          border-radius: 10px;
+      }
+      .form-select:focus {
+          background-color: #2c2c2c;
+          color: white;
+          border-color: #0dcaf0;
+          box-shadow: none;
+      }
+
+      /* Footer */
+      footer {
+        background-color: #1a1a1a;
+        color: #888;
+        font-size: 0.85rem;
+        padding: 20px 0;
+        border-top: 1px solid #333;
+        margin-top: 50px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- ===== NAVBAR ===== -->
+    <header class="navbar navbar-expand-lg navbar-dark fixed-top">
+      <div class="container">
+        <a class="navbar-brand" href="{{ url_for('index') }}">SMART TRAFFIC VISION</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+          <ul class="navbar-nav">
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+            <li class="nav-item"><a class="nav-link active" href="{{ url_for('static_page') }}">Statistik & Analitik</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('read_artikel') }}">Artikel</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">Tentang Kami</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('cctv_page') }}">Peta CCTV</a></li>
+          </ul>
+          <a href="{{ url_for('login') }}" class="btn btn-outline-light rounded-pill ms-lg-3">Login Admin</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="container py-5">
+      <h2 class="fw-bold mb-3 text-center text-white">Analitik Lalu Lintas</h2>
+      <p class="text-secondary text-center mb-4">
+        Pilih lokasi CCTV untuk melihat tren kepadatan lalu lintas.
+      </p>
+
+      <!-- CCTV SELECTOR -->
+      <div class="row justify-content-center mb-4">
+          <div class="col-md-6">
+              <select class="form-select text-center py-2" id="cctvSelect">
+                  <option value="">-- Pilih CCTV --</option>
+                  <!-- Opsi akan diisi Javascript -->
+              </select>
+          </div>
+      </div>
+
+      <!-- FILTER BUTTONS (Harian, Mingguan, Bulanan) -->
+      <div class="text-center mb-4">
+        <div class="btn-group btn-filter-group" role="group">
+          <button class="btn active" onclick="changePeriod('harian', this)">Harian</button>
+          <button class="btn" onclick="changePeriod('mingguan', this)">Mingguan</button>
+          <button class="btn" onclick="changePeriod('bulanan', this)">Bulanan</button>
+        </div>
+      </div>
+
+      <!-- CHART SECTION (Centered Single Chart) -->
+      <div class="row justify-content-center">
+        <div class="col-lg-10">
+          <div class="chart-card">
+            <h4>Kepadatan Lalu Lintas (%)</h4>
+            <div style="position: relative; height: 400px; width: 100%;">
+                <canvas id="trafficChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="text-center mt-5">
+      <div class="container">
+        <small>© 2025 Smart Traffic Vision | Powered by Kelompok 3 5B Teknik Informatika</small>
+      </div>
+    </footer>
+
+    <!-- ===== SCRIPTS ===== -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Global Vars
+      let trafficChartInstance = null;
+      let currentCctvId = null;
+      let currentPeriod = 'harian';
+
+      document.addEventListener('DOMContentLoaded', function() {
+          // 1. Fetch CCTV List
+          fetch('/api/cctv_locations')
+            .then(res => res.json())
+            .then(data => {
+                const select = document.getElementById('cctvSelect');
+                data.forEach(cctv => {
+                    const opt = document.createElement('option');
+                    opt.value = cctv.id;
+                    opt.innerText = cctv.name;
+                    select.appendChild(opt);
+                });
+            })
+            .catch(err => console.error("Error loading CCTV:", err));
+
+          // 2. Init Chart Kosong
+          initEmptyChart();
+
+          // 3. Event Listener Dropdown
+          document.getElementById('cctvSelect').addEventListener('change', function() {
+              currentCctvId = this.value;
+              updateChart();
+          });
+      });
+
+      // Fungsi Ganti Periode (Tombol)
+      function changePeriod(period, btnElement) {
+          // Update Tombol Active UI
+          document.querySelectorAll('.btn-filter-group .btn').forEach(btn => btn.classList.remove('active'));
+          btnElement.classList.add('active');
+          
+          currentPeriod = period;
+          updateChart();
+      }
+
+      // Fungsi Utama Update Chart
+      function updateChart() {
+          // Jika belum pilih CCTV, jangan load data (atau load kosong)
+          let url = `/api/public/analytics_data?period=${currentPeriod}`;
+          
+          if(currentCctvId) {
+              url += `&cctv_id=${currentCctvId}`;
+          } else {
+              // Jika tidak ada ID, render kosong dan return
+              renderTrafficChart([], []); 
+              return;
+          }
+
+          // Fetch Data dari API Python
+          fetch(url)
+              .then(response => response.json())
+              .then(data => {
+                  renderTrafficChart(data.labels, data.traffic);
+              })
+              .catch(err => console.error("Gagal mengambil data:", err));
+      }
+
+      function initEmptyChart() {
+          // Render chart kosong awal
+          const ctx = document.getElementById('trafficChart').getContext('2d');
+          trafficChartInstance = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                  labels: [],
+                  datasets: []
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                      y: { beginAtZero: true, max: 100, grid: { color: '#333' } },
+                      x: { grid: { display: false } }
+                  }
+              }
+          });
+      }
+
+      // Render Grafik Kepadatan (Bar Chart Modern)
+      function renderTrafficChart(labels, data) {
+          const ctx = document.getElementById('trafficChart').getContext('2d');
+          
+          if (trafficChartInstance) {
+              trafficChartInstance.destroy(); // Hapus chart lama
+          }
+
+          // Buat Gradient Warna Biru
+          let gradient = ctx.createLinearGradient(0, 0, 0, 400);
+          gradient.addColorStop(0, 'rgba(13, 202, 240, 0.8)'); // Biru terang atas
+          gradient.addColorStop(1, 'rgba(13, 202, 240, 0.1)'); // Transparan bawah
+
+          trafficChartInstance = new Chart(ctx, {
+              type: 'bar', 
+              data: {
+                  labels: labels,
+                  datasets: [{
+                      label: 'Tingkat Kepadatan',
+                      data: data,
+                      backgroundColor: gradient,
+                      borderColor: '#0dcaf0',
+                      borderWidth: 1,
+                      borderRadius: 5,
+                      barPercentage: 0.5 
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                      y: { 
+                          beginAtZero: true, 
+                          max: 100, 
+                          ticks: { color: '#bbb' }, 
+                          grid: { color: '#333', borderDash: [5, 5] } 
+                      },
+                      x: { 
+                          ticks: { color: '#bbb' }, 
+                          grid: { display: false } 
+                      }
+                  },
+                  plugins: { 
+                      legend: { display: false },
+                      tooltip: {
+                          backgroundColor: 'rgba(0,0,0,0.8)',
+                          titleColor: '#fff',
+                          bodyColor: '#0dcaf0',
+                          callbacks: {
+                              label: function(context) {
+                                  return context.parsed.y + '% Kepadatan';
+                              }
+                          }
+                      }
+                  }
+              }
+          });
+      }
+    </script>
+  </body>
+</html>

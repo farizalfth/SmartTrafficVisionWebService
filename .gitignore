@@ -1,0 +1,20 @@
+
+# Virtual Environment
+venv/
+
+# Python cache
+__pycache__/
+
+# AI / ML
+*.pt
+*.onnx
+*.h5
+
+# Logs & temp
+*.log
+
+# OS
+.DS_Store
+
+# Secrets
+serviceAccountKey.json
