@@ -69,7 +69,6 @@ def get_db_cursor(dictionary=True):
     return db.cursor(dictionary=dictionary)
 
 # ===== DECORATORS =====
-
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -116,7 +115,6 @@ def generate_live_stream(video_url, cctv_id):
         waktu_sekarang = time.time()
 
         # --- A. UPDATE LIVE (SETIAP FRAME) ---
-        # Ini yang membuat Kepadatan & Kecepatan bergerak terus di Dashboard
         try:
             ref_live = firebase_db.reference(f'traffic_stats/{cctv_id}/live')
             ref_live.update({
@@ -161,7 +159,6 @@ def generate_live_stream(video_url, cctv_id):
 # =========================================================================
 
 def fetch_cctv_list():
-    # SAYA PERBAIKI BAGIAN INI AGAR TIDAK ERROR (Link YouTube diisi)
     return [
         { 
             "id": 1, "name": "CCTV Pontianak (Simpang Garuda)", "status": "Aktif", 
