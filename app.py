@@ -105,10 +105,9 @@ def generate_live_stream(video_url, cctv_id):
         success, frame = cap.read()
         if not success: break
 
-        # 1. Jalankan Deteksi YOLO11
         results = model.predict(frame, classes=VEHICLE_CLASSES, verbose=False, conf=0.25)
         
-        # 2. Hitung deteksi detik ini
+        # Hitung deteksi detik ini
         counts_now = {'mobil': 0, 'motor': 0, 'bus': 0, 'truk': 0}
         for r in results:
             for box in r.boxes:
@@ -120,72 +119,60 @@ def generate_live_stream(video_url, cctv_id):
         
         total_now = sum(counts_now.values())
         waktu_sekarang = time.time()
-        timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now()
+        timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
+        date_today = now.strftime("%Y-%m-%d") # Folder Tanggal (2026-01-11)
 
-        # --- A. UPDATE LIVE (UNTUK KARTU DASHBOARD & GRAFIK LINGKARAN) ---
-        # Ini berjalan setiap frame agar jarum kecepatan & grafik lingkaran bergerak halus
+        # --- A. UPDATE LIVE (Tetap untuk Dashboard Real-time) ---
         try:
             ref_live = firebase_db.reference(f'traffic_stats/{cctv_id}/live')
             ref_live.update({
-                'total': total_now,           # Digunakan untuk Kepadatan & Kecepatan
-                'detail': counts_now,         # Digunakan untuk Grafik Lingkaran (Donut Chart)
+                'total': total_now,
+                'detail': counts_now,
                 'last_update': timestamp_str
             })
-        except Exception as e:
-            print(f"Gagal update live ke Firebase: {e}")
+        except: pass
 
-        # --- B. LOGIKA AKUMULASI & HISTORY (SETIAP 5 DETIK) ---
-        # Digunakan untuk Angka Total & Grafik Batang (Tren)
-        # --- B. LOGIKA AKUMULASI & HISTORY (SETIAP 5 DETIK) ---
+        # --- B. LOGIKA AKUMULASI HARIAN (AGAR DATA KEMARIN TIDAK HILANG) ---
         if waktu_sekarang - last_accumulate_time > 5:
             try:
-                # 1. Tentukan Referensi Nodes
-                ref_cum = firebase_db.reference(f'traffic_stats/{cctv_id}/cumulative')
-                ref_hist = firebase_db.reference(f'traffic_stats/{cctv_id}/history')
-                ref_live = firebase_db.reference(f'traffic_stats/{cctv_id}/live')
+                # Kita simpan di folder berdasarkan TANGGAL hari ini
+                # Struktur: traffic_stats/ID/daily_reports/2026-01-11
+                ref_daily = firebase_db.reference(f'traffic_stats/{cctv_id}/daily_reports/{date_today}')
+                daily_data = ref_daily.get()
 
-                # 2. LOGIKA AKUMULASI SELAMANYA (Cumulative)
-                old_data = ref_cum.get()
-                if not old_data:
-                    old_data = {'grand_total': 0, 'detail': {'mobil':0, 'motor':0, 'bus':0, 'truk':0}}
+                if not daily_data:
+                    # Jika hari baru mulai, inisialisasi dengan 0
+                    daily_data = {'total_hari_ini': 0, 'detail': {'mobil':0,'motor':0,'bus':0,'truk':0}}
 
-                old_detail = old_data.get('detail', {'mobil':0, 'motor':0, 'bus':0, 'truk':0})
-                
-                # Hitung Nilai Baru
-                new_total = old_data.get('grand_total', 0) + total_now
-                new_detail = {
-                    'mobil': old_detail.get('mobil', 0) + counts_now['mobil'],
-                    'motor': old_detail.get('motor', 0) + counts_now['motor'],
-                    'bus': old_detail.get('bus', 0) + counts_now['bus'],
-                    'truk': old_detail.get('truk', 0) + counts_now['truk']
+                # Ambil data hari ini yang sudah tersimpan
+                old_total_daily = daily_data.get('total_hari_ini', 0)
+                old_detail_daily = daily_data.get('detail', {'mobil':0,'motor':0,'bus':0,'truk':0})
+
+                # Tambahkan dengan deteksi baru
+                new_total_daily = old_total_daily + total_now
+                new_detail_daily = {
+                    'mobil': old_detail_daily.get('mobil', 0) + counts_now['mobil'],
+                    'motor': old_detail_daily.get('motor', 0) + counts_now['motor'],
+                    'bus': old_detail_daily.get('bus', 0) + counts_now['bus'],
+                    'truk': old_detail_daily.get('truk', 0) + counts_now['truk']
                 }
 
-                # Simpan ke Node Cumulative (Untuk data "Sepanjang Masa")
-                ref_cum.set({
-                    'grand_total': new_total,
-                    'detail': new_detail,
+                # Simpan kembali ke folder tanggal hari ini
+                ref_daily.set({
+                    'total_hari_ini': new_total_daily,
+                    'detail': new_detail_daily,
                     'last_update': timestamp_str
                 })
+                
+                # Update total_akumulasi (semua waktu) di live untuk tampilan utama
+                ref_live.update({'total_akumulasi_hari_ini': new_total_daily})
 
-                # 3. LOGIKA RIWAYAT (History - UNTUK GRAFIK BATANG & LINGKARAN PERIODIK)
-                # PENTING: Gunakan .push() agar data tersimpan sebagai riwayat dan bisa difilter
-                # Kita masukkan 'detail' di sini agar grafik distribusi Mingguan/Bulanan bisa dihitung
-                ref_hist.push({
-                    'total': total_now,
-                    'detail': counts_now, # Data detik ini disimpan ke riwayat
-                    'last_update': timestamp_str
-                })
-                
-                # 4. Update Ringkasan Dashboard (Live)
-                ref_live.update({'total_akumulasi': new_total})
-                
                 last_accumulate_time = waktu_sekarang
-                print(f"Sync Firebase Berhasil: CCTV {cctv_id} | Akumulasi: {new_total}")
-
             except Exception as e:
-                print(f"Error Update Firebase: {e}")
+                print(f"Error Harian: {e}")
 
-        # Streaming Video ke Browser
+        # Streaming Video
         annotated_frame = results[0].plot()
         ret, buffer = cv2.imencode('.jpg', annotated_frame)
         yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
@@ -397,47 +384,65 @@ def logic_get_summary(cctv_id):
 # =========================================================================
 
 def get_firebase_logic_summary(cctv_id):
-    """Fungsi tunggal untuk mengambil data ringkasan (Admin & User)"""
+    """Mengambil ringkasan data khusus HARI INI agar tidak tercampur dengan kemarin"""
+    
+    # 1. Dapatkan tanggal hari ini untuk akses folder harian
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    
     if not cctv_id:
         return {
-            "kendaraan_hari_ini": 0, "kepadatan_tertinggi": "0%", 
-            "rata_rata_kecepatan": "80 km/j", "kamera_aktif": len(cctv_list)
+            "kendaraan_hari_ini": 0, 
+            "kepadatan_tertinggi": "0%", 
+            "rata_rata_kecepatan": "80 km/j", 
+            "kamera_aktif": len(cctv_list)
         }
     
     try:
-        # Ambil data LIVE dari Firebase
-        ref = firebase_db.reference(f'traffic_stats/{cctv_id}/live')
-        data = ref.get()
+        # Ambil data LIVE (untuk deteksi detik ini)
+        ref_live = firebase_db.reference(f'traffic_stats/{cctv_id}/live')
+        live_data = ref_live.get()
         
-        if data:
-            # 1. TOTAL KENDARAAN (Akumulasi yang menyatu)
-            total_akumulasi = data.get('total_akumulasi', 0)
+        # Ambil data DAILY (khusus untuk total akumulasi hari ini)
+        ref_daily = firebase_db.reference(f'traffic_stats/{cctv_id}/daily_reports/{today_str}')
+        daily_data = ref_daily.get()
+        
+        if live_data:
+            # A. TOTAL KENDARAAN: Ambil dari folder harian (daily_reports)
+            # Jika hari baru mulai dan data belum ada, set ke 0
+            if daily_data:
+                total_hari_ini = daily_data.get('total_hari_ini', 0)
+            else:
+                total_hari_ini = live_data.get('total_akumulasi_hari_ini', 0)
             
-            # 2. DETEKSI DETIK INI (Untuk Kepadatan & Kecepatan)
-            # PENTING: Jika YOLO mendeteksi 0, maka kepadatan 0%. Jika ada 1 mobil, angka akan berubah.
-            total_sekarang = data.get('total', 0) 
+            # B. DETEKSI DETIK INI: Ambil angka 'total' dari live (untuk kepadatan)
+            total_sekarang = live_data.get('total', 0) 
             
-            # 3. HITUNG KEPADATAN (Gunakan kapasitas 15 agar lebih sensitif)
+            # C. HITUNG KEPADATAN (Kapasitas 15 agar sensitif)
             kapasitas = 15
             kepadatan_int = min(100, int((total_sekarang / kapasitas) * 100))
             
-            # 4. HITUNG KECEPATAN (Dinamis)
-            # 80 km/j saat kosong, turun drastis saat ada kendaraan
+            # D. HITUNG KECEPATAN (Dinamis)
             if total_sekarang == 0:
                 kecepatan_int = 80
             else:
                 kecepatan_int = max(10, 80 - int(kepadatan_int * 0.8))
             
             return {
-                "kendaraan_hari_ini": total_akumulasi,
-                "kepadatan_tertinggi": kepadatan_int,
+                "kendaraan_hari_ini": total_hari_ini, # Data murni HARI INI
+                "kepadatan_tertinggi": kepadatan_int, # Kirim angka, JS akan tambah %
                 "rata_rata_kecepatan": f"{kecepatan_int} km/j",
                 "kamera_aktif": len(cctv_list)
             }
+            
     except Exception as e:
         print(f"Firebase Summary Error: {e}")
     
-    return {"kendaraan_hari_ini": 0, "kepadatan_tertinggi": "0%", "rata_rata_kecepatan": "80 km/j", "kamera_aktif": len(cctv_list)}
+    return {
+        "kendaraan_hari_ini": 0, 
+        "kepadatan_tertinggi": 0, 
+        "rata_rata_kecepatan": "80 km/j", 
+        "kamera_aktif": len(cctv_list)
+    }
 
 def get_firebase_logic_history(cctv_id, period):
     if not cctv_id: return {"labels": [], "data": []}
@@ -557,35 +562,30 @@ def server_status():
 # =========================================================================
 
 @app.route('/api/admin/vehicle_distribution')
+@api_login_required
 def api_admin_vehicle_distribution():
     cctv_id = request.args.get('cctv_id')
-    period = request.args.get('period', 'harian') # Tangkap parameter periode
+    today_str = datetime.now().strftime("%Y-%m-%d")
     counts = {'mobil': 0, 'motor': 0, 'bus': 0, 'truk': 0}
     
     try:
-        ref = firebase_db.reference(f'traffic_stats/{cctv_id}/history')
-        history_data = ref.get()
-        now = datetime.now()
+        ref = firebase_db.reference('traffic_stats')
         
-        if history_data:
-            for val in history_data.values():
-                dt = datetime.strptime(val['last_update'], '%Y-%m-%d %H:%M:%S')
-                
-                # Filter data berdasarkan periode
-                is_in_period = False
-                if period == 'harian' and dt.date() == now.date():
-                    is_in_period = True
-                elif period == 'mingguan' and dt > (now - timedelta(days=7)):
-                    is_in_period = True
-                elif period == 'bulanan' and dt.month == now.month:
-                    is_in_period = True
-                
-                if is_in_period:
-                    d = val.get('detail', {})
+        if cctv_id:
+            # Ambil data akumulasi khusus HARI INI
+            data = ref.child(f"{cctv_id}/daily_reports/{today_str}/detail").get()
+            if data: counts = data
+        else:
+            # Gabungkan akumulasi HARI INI dari SEMUA CCTV
+            all_data = ref.get()
+            if all_data:
+                for key in all_data:
+                    d = all_data[key].get('daily_reports', {}).get(today_str, {}).get('detail', {})
                     for k in counts: counts[k] += d.get(k, 0)
 
         values = [counts['mobil'], counts['motor'], counts['bus'], counts['truk']]
         total = sum(values)
+        # Hitung persen
         perc = [f"{round((v/total*100), 1)}%" if total > 0 else "0%" for v in values]
         
         return jsonify({"labels": ['Mobil', 'Motor', 'Bus', 'Truk'], "data": values, "percentages": perc})
@@ -596,32 +596,37 @@ def api_admin_vehicle_distribution():
 @api_login_required
 def api_admin_traffic_data():
     cctv_id = request.args.get('cctv_id')
+    period = request.args.get('period', 'harian')
+    today_str = datetime.now().strftime("%Y-%m-%d") # Filter tanggal hari ini
+
     try:
-        ref = firebase_db.reference('traffic_stats')
+        ref = firebase_db.reference(f'traffic_stats/{cctv_id}/history')
+        # Ambil data yang cukup banyak untuk difilter
+        history_data = ref.order_by_key().limit_to_last(100).get()
+        
         labels = []
         kepadatan = []
 
-        if cctv_id:
-            # TREN PER CCTV: Ambil history 12 data terakhir
-            history = ref.child(f"{cctv_id}/history").order_by_key().limit_to_last(12).get()
-            if history:
-                for val in history.values():
-                    labels.append(val.get('last_update', '')[11:16])
-                    kepadatan.append(min(100, int((val.get('total', 0) / 20) * 100)))
-        else:
-            # SEMUA CCTV: Tampilkan perbandingan kepadatan tiap kamera saat ini
-            all_data = ref.get()
-            if all_data:
-                for id_key in sorted(all_data.keys()):
-                    # Cari nama dari cctv_list manual
-                    name = next((item['name'] for item in cctv_list if str(item['id']) == str(id_key)), f"ID {id_key}")
-                    labels.append(name)
-                    # Ambil deteksi live terakhir
-                    t = all_data[id_key].get('live', {}).get('total', 0)
-                    kepadatan.append(min(100, int((t / 20) * 100)))
+        if history_data:
+            for key in sorted(history_data.keys()):
+                val = history_data[key]
+                last_update = val.get('last_update', '')
 
-        return jsonify({"labels": labels, "kepadatan": kepadatan})
+                # FILTER: Hanya ambil data jika tanggalnya sama dengan HARI INI
+                if last_update.startswith(today_str):
+                    # Ambil Jam:Menit (10:22)
+                    labels.append(last_update[11:16])
+                    # Hitung kepadatan (asumsi 20 kendaraan = 100%)
+                    total = val.get('total', 0)
+                    kepadatan.append(min(100, int((total / 20) * 100)))
+
+        # Jika data hari ini masih sedikit, tampilkan apa adanya
+        return jsonify({
+            "labels": labels[-15:], # Tampilkan 15 data terakhir hari ini
+            "kepadatan": kepadatan[-15:]
+        })
     except Exception as e:
+        print(f"Error Chart Batang: {e}")
         return jsonify({"labels": [], "kepadatan": []})
 
 @app.route('/api/cctv_locations')
@@ -636,11 +641,33 @@ def get_cctv_locations():
 @app.route('/api/public/vehicle_distribution')
 def api_public_vehicle_distribution():
     cctv_id = request.args.get('cctv_id')
-    period = request.args.get('period', 'harian')
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    counts = {'mobil': 0, 'motor': 0, 'bus': 0, 'truk': 0}
     
-    # Gunakan logika yang sama dengan admin agar data sinkron
-    # Kita bisa membuat fungsi pembantu agar tidak menulis kode yang sama dua kali
-    return jsonify(get_logic_vehicle_distribution(cctv_id, period))
+    try:
+        ref = firebase_db.reference('traffic_stats')
+        # Ambil rincian HARI INI
+        if cctv_id:
+            data = ref.child(f"{cctv_id}/daily_reports/{today_str}/detail").get()
+            if data: counts = data
+        else:
+            all_data = ref.get()
+            if all_data:
+                for key in all_data:
+                    d = all_data[key].get('daily_reports', {}).get(today_str, {}).get('detail', {})
+                    for k in counts: counts[k] += d.get(k, 0)
+
+        values = [counts.get('mobil', 0), counts.get('motor', 0), counts.get('bus', 0), counts.get('truk', 0)]
+        total = sum(values)
+        perc = [f"{round((v/total*100), 1)}%" if total > 0 else "0%" for v in values]
+        
+        return jsonify({
+            "labels": ['Mobil', 'Motor', 'Bus', 'Truk'],
+            "data": values,
+            "percentages": perc
+        })
+    except:
+        return jsonify({"labels": ['Mobil', 'Motor', 'Bus', 'Truk'], "data": [0,0,0,0], "percentages": ["0%","0%","0%","0%"]})
 
 # Fungsi Pembantu (Taruh di atas route API)
 def get_logic_vehicle_distribution(cctv_id, period):

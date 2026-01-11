@@ -306,8 +306,22 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 0.9rem;
+            /* Membuat teks di kiri, angka di kanan */
             width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .legend-item div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            /* Jarak antara titik warna dan teks nama kendaraan */
+        }
+
+        .legend-item .fw-bold {
+            margin-left: 20px;
+            /* Memberi jarak tambahan sebelum angka persen */
+            color: var(--accent-cyan);
         }
 
         .legend-color {
@@ -588,7 +602,7 @@
             </div>
         </div>
 
-        <!-- BAGIAN 3: STATISTIK & ANALITIK (DENGAN FILTER CCTV KHUSUS) -->
+        <!-- BAGIAN 3: STATISTIK & ANALITIK -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="fw-bold text-white mb-0">Statistik & Analitik</h4>
             <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 250px;"
@@ -598,9 +612,9 @@
         </div>
 
         <div class="row g-4 mb-5">
-            <!-- Bar Chart (Tren Kepadatan) -->
+            <!-- KIRI: Tren Kepadatan -->
             <div class="col-lg-7">
-                <div class="dashboard-card">
+                <div class="dashboard-card" style="min-height: 450px;">
                     <div class="card-header-custom">
                         <h4>Tren Kepadatan</h4>
                         <div class="period-toggle">
@@ -615,50 +629,51 @@
                             <label for="t_bulan">Bulan</label>
                         </div>
                     </div>
-                    <div style="height: 300px; width: 100%;">
+                    <div style="height: 300px; position: relative;">
                         <canvas id="trafficChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Doughnut Chart (Distribusi) -->
+            <!-- KANAN: Distribusi Kendaraan (REAL TIME) -->
             <div class="col-lg-5">
-                <div class="dashboard-card">
+                <div class="dashboard-card" style="min-height: 450px;">
                     <div class="card-header-custom">
                         <h4>Distribusi Kendaraan</h4>
-                        <div class="period-toggle">
-                            <input type="radio" id="v_hari" name="vehiclePeriod" value="harian" checked
-                                onchange="changeVehiclePeriod(this.value)">
-                            <label for="v_hari">Hari</label>
-                            <input type="radio" id="v_minggu" name="vehiclePeriod" value="mingguan"
-                                onchange="changeVehiclePeriod(this.value)">
-                            <label for="v_minggu">Minggu</label>
-                            <input type="radio" id="v_bulan" name="vehiclePeriod" value="bulanan"
-                                onchange="changeVehiclePeriod(this.value)">
-                            <label for="v_bulan">Bulan</label>
-                        </div>
+                        <span class="badge rounded-pill text-dark"
+                            style="background-color: var(--accent-cyan); font-size: 0.7rem; padding: 6px 15px;">REAL
+                            TIME</span>
                     </div>
-                    <div class="d-flex align-items-center justify-content-center h-100 pb-3">
-                        <div style="height: 220px; width: 220px;">
+                    <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                        <div style="height: 220px; width: 220px; position: relative;" class="mb-4">
                             <canvas id="vehicleChart"></canvas>
                         </div>
 
-                        <div class="chart-legend-custom">
-                            <div class="legend-item">
-                                <div><span class="legend-color" style="background: #00E5FF;"></span>Mobil</div>
-                                <span class="fw-bold">0%</span> <!-- Angka ini yang akan diupdate JS -->
+                        <!-- Legend yang sudah dirapikan spasinya -->
+                        <div class="chart-legend-custom w-100 px-4">
+                            <div class="legend-item d-flex justify-content-between align-items-center mb-2">
+                                <div><span class="legend-color"
+                                        style="background: #00E5FF; width:12px; height:12px; display:inline-block; border-radius:50%; margin-right:8px;"></span>Mobil
+                                </div>
+                                <span class="fw-bold text-info" id="val-mobil">0%</span>
                             </div>
-                            <div class="legend-item">
-                                <div><span class="legend-color" style="background: #FFD600;"></span>Motor</div>
-                                <span class="fw-bold">0%</span>
+                            <div class="legend-item d-flex justify-content-between align-items-center mb-2">
+                                <div><span class="legend-color"
+                                        style="background: #FFD600; width:12px; height:12px; display:inline-block; border-radius:50%; margin-right:8px;"></span>Motor
+                                </div>
+                                <span class="fw-bold text-info" id="val-motor">0%</span>
                             </div>
-                            <div class="legend-item">
-                                <div><span class="legend-color" style="background: #00C853;"></span>Bus</div>
-                                <span class="fw-bold">0%</span>
+                            <div class="legend-item d-flex justify-content-between align-items-center mb-2">
+                                <div><span class="legend-color"
+                                        style="background: #00C853; width:12px; height:12px; display:inline-block; border-radius:50%; margin-right:8px;"></span>Bus
+                                </div>
+                                <span class="fw-bold text-info" id="val-bus">0%</span>
                             </div>
-                            <div class="legend-item">
-                                <div><span class="legend-color" style="background: #FF5252;"></span>Truk</div>
-                                <span class="fw-bold">0%</span>
+                            <div class="legend-item d-flex justify-content-between align-items-center mb-2">
+                                <div><span class="legend-color"
+                                        style="background: #FF5252; width:12px; height:12px; display:inline-block; border-radius:50%; margin-right:8px;"></span>Truk
+                                </div>
+                                <span class="fw-bold text-info" id="val-truk">0%</span>
                             </div>
                         </div>
                     </div>
@@ -768,14 +783,13 @@
         {{ cctv_list | tojson }}
     </script>
 
-        <!-- Scripts -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
             lucide.createIcons();
 
             // --- GLOBAL VARS ---
             let currentFeedId = null;
-            let currentChartId = null;
+            let currentChartId = ""; // Default kosong untuk "Semua CCTV"
             let trafficPeriod = 'harian';
             let vehiclePeriod = 'harian';
             let trafficChartInstance = null;
@@ -787,6 +801,7 @@
                 const feedSelect = document.getElementById('cctvSelect');
                 const chartSelect = document.getElementById('chartCctvSelect');
 
+                // 1. Isi Dropdown CCTV
                 if (cctvData.length > 0) {
                     cctvData.forEach(cctv => {
                         let opt = new Option(cctv.name, cctv.id);
@@ -796,11 +811,13 @@
                         let opt2 = new Option(cctv.name, cctv.id);
                         chartSelect.appendChild(opt2);
                     });
-
-                    fetchSummary(null);
-                    updateCharts(null);
                 }
 
+                // 2. Load Data Awal
+                fetchSummary(null);
+                updateCharts("");
+
+                // 3. Listener Dropdown Video (Live Feed)
                 feedSelect.addEventListener('change', function () {
                     currentFeedId = this.value;
                     if (!currentFeedId) {
@@ -810,16 +827,62 @@
                     }
                     const streamUrl = this.options[this.selectedIndex].dataset.stream;
                     updatePlayer(streamUrl);
-
-                    // Fetch data summary awal
                     fetchSummary(currentFeedId);
                 });
 
+                // 4. Listener Dropdown Statistik (Grafik)
                 chartSelect.addEventListener('change', function () {
                     currentChartId = this.value;
                     updateCharts(currentChartId);
                 });
+
+                // ==========================================================
+                // --- PENTING: LOGIKA REAL-TIME POLLING (SINKRON FIREBASE) ---
+                // ==========================================================
+                
+                // Polling Otomatis tiap 5 detik agar data dari YOLO langsung muncul
+                setInterval(() => {
+                    const chartId = document.getElementById('chartCctvSelect').value;
+                    updateCharts(chartId);
+                }, 5000);
             });
+
+            // --- CORE FUNCTIONS (API CALLERS) ---
+
+            function updateCharts(id) {
+                // 1. Ambil data Tren Kepadatan (Bisa Harian/Mingguan/Bulanan)
+                fetchTrafficChart(id, trafficPeriod);
+
+                // 2. Ambil data Distribusi Kendaraan (Selalu Harian/Real-Time hari ini)
+                fetchVehicleChart(id, 'harian');
+            }
+
+            // Fungsi ganti periode (Harian/Mingguan/Bulanan)
+            function changeTrafficPeriod(period) {
+                trafficPeriod = period;
+                updateCharts(currentChartId);
+            }
+
+            function changeVehiclePeriod(period) {
+                vehiclePeriod = period;
+                updateCharts(currentChartId);
+            }
+
+            function fetchSummary(id) {
+                let url = `/api/admin/dashboard_summary`;
+                if (id) url += `?cctv_id=${id}`;
+
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        // Update elemen angka di Dashboard
+                        document.getElementById('kendaraanHariIni').innerText = data.kendaraan_hari_ini;
+                        document.getElementById('kepadatanTertinggi').innerText = data.kepadatan_tertinggi + "%";
+                        document.getElementById('rataRataKecepatan').innerText = data.rata_rata_kecepatan;
+                        document.getElementById('kameraAktif').innerText = data.kamera_aktif;
+                    })
+                    .catch(err => console.error("Summary error:", err));
+            }
 
             // --- FUNGSI PLAYER ---
             function updatePlayer(url) {
@@ -965,17 +1028,11 @@
                 console.log("Sinkronisasi Firebase: Data diperbarui...");
             }, 5000); // Update setiap 5 detik
 
-            function updateCharts(id) {
-                fetchTrafficChart(id, trafficPeriod);
-                fetchVehicleChart(id, vehiclePeriod);
-            }
-
+            // Fungsi Ganti Periode untuk Tren Kepadatan
             function changeTrafficPeriod(period) {
-                trafficPeriod = period; // 'harian', 'mingguan', atau 'bulanan'
-                fetchTrafficChart(currentChartId, period);
-
-                // Update juga grafik lingkaran agar sinkron periodenya
-                fetchVehicleChart(currentChartId, period);
+                trafficPeriod = period;
+                const chartId = document.getElementById('chartCctvSelect').value;
+                fetchTrafficChart(chartId, period);
             }
 
             function changeVehiclePeriod(period) {
