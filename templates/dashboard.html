@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="id">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,7 +11,8 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -39,21 +41,25 @@
             backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border-color);
         }
+
         .navbar-brand {
             font-weight: 700;
             color: var(--accent-cyan) !important;
             letter-spacing: 1px;
         }
+
         .navbar-nav .nav-link {
             color: var(--text-main) !important;
             font-weight: 500;
             margin-right: 15px;
             transition: color 0.2s ease;
         }
+
         .navbar-nav .nav-link:hover,
         .navbar-nav .nav-link.active {
             color: var(--accent-cyan) !important;
         }
+
         .btn-outline-light {
             color: var(--accent-cyan);
             border-color: var(--accent-cyan);
@@ -61,6 +67,7 @@
             border-radius: 50px;
             padding: 5px 20px;
         }
+
         .btn-outline-light:hover {
             background-color: var(--accent-cyan);
             color: #000;
@@ -81,10 +88,30 @@
             align-items: center;
             transition: transform 0.3s;
         }
-        .summary-card:hover { transform: translateY(-5px); border-color: var(--accent-cyan); }
-        .summary-card .icon { margin-bottom: 15px; width: 48px; height: 48px; }
-        .summary-card .value { font-size: 2.2rem; font-weight: 700; color: #fff; margin-bottom: 5px; }
-        .summary-card .label { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-cyan);
+        }
+
+        .summary-card .icon {
+            margin-bottom: 15px;
+            width: 48px;
+            height: 48px;
+        }
+
+        .summary-card .value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
 
         /* Dashboard Cards */
         .dashboard-card {
@@ -95,10 +122,20 @@
             margin-bottom: 24px;
             height: 100%;
         }
+
         .card-header-custom {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
         }
-        .card-header-custom h4 { margin: 0; font-weight: 600; font-size: 1.25rem; color: var(--accent-cyan); }
+
+        .card-header-custom h4 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.25rem;
+            color: var(--accent-cyan);
+        }
 
         /* Video Player */
         .video-container {
@@ -106,42 +143,110 @@
             min-height: 400px;
             background-color: #000;
             border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             border: 1px solid #444;
             overflow: hidden;
         }
-        .video-container iframe { width: 100%; height: 400px; border: none; }
+
+        .video-container iframe {
+            width: 100%;
+            height: 400px;
+            border: none;
+        }
 
         /* Article List */
         .article-item {
-            display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #333; text-decoration: none; color: white;
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+            text-decoration: none;
+            color: white;
         }
-        .article-item:last-child { border-bottom: none; }
-        .article-item:hover { background-color: rgba(255,255,255,0.05); }
-        .article-item img { width: 70px; height: 50px; border-radius: 6px; object-fit: cover; margin-right: 15px; }
+
+        .article-item:last-child {
+            border-bottom: none;
+        }
+
+        .article-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .article-item img {
+            width: 70px;
+            height: 50px;
+            border-radius: 6px;
+            object-fit: cover;
+            margin-right: 15px;
+        }
 
         /* Chart Controls */
         .period-toggle {
-            background-color: #2c2c2c; border-radius: 8px; padding: 4px; display: inline-flex;
+            background-color: #2c2c2c;
+            border-radius: 8px;
+            padding: 4px;
+            display: inline-flex;
         }
-        .period-toggle input { display: none; }
+
+        .period-toggle input {
+            display: none;
+        }
+
         .period-toggle label {
-            padding: 5px 15px; font-size: 0.8rem; color: #aaa; cursor: pointer; border-radius: 6px; transition: all 0.3s;
+            padding: 5px 15px;
+            font-size: 0.8rem;
+            color: #aaa;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
         }
-        .period-toggle input:checked + label {
-            background-color: var(--accent-cyan); color: #000; font-weight: 600;
+
+        .period-toggle input:checked+label {
+            background-color: var(--accent-cyan);
+            color: #000;
+            font-weight: 600;
         }
-        
+
         /* Custom Legend for Doughnut */
         .chart-legend-custom {
-            display: flex; flex-direction: column; justify-content: center; gap: 12px; margin-left: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 12px;
+            margin-left: 20px;
         }
-        .legend-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; width: 100%; }
-        .legend-color { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; display: inline-block; }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            display: inline-block;
+        }
 
         /* Form Controls */
-        .form-select { background-color: #2c2c2c; border: 1px solid #444; color: white; }
-        .form-select:focus { background-color: #2c2c2c; color: white; border-color: var(--accent-cyan); box-shadow: none; }
+        .form-select {
+            background-color: #2c2c2c;
+            border: 1px solid #444;
+            color: white;
+        }
+
+        .form-select:focus {
+            background-color: #2c2c2c;
+            color: white;
+            border-color: var(--accent-cyan);
+            box-shadow: none;
+        }
 
         /* Footer */
         footer {
@@ -154,6 +259,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <!-- NAVBAR -->
@@ -176,7 +282,7 @@
     </nav>
 
     <div class="container mt-4">
-        
+
         <!-- BAGIAN 1: RINGKASAN LALU LINTAS -->
         <h4 class="mb-3 fw-bold text-white text-center">Ringkasan Lalu Lintas Real-time</h4>
         <div class="row g-4 mb-5 justify-content-center">
@@ -217,7 +323,8 @@
                 <div class="dashboard-card">
                     <div class="card-header-custom">
                         <h4>Live Feed CCTV Utama</h4>
-                        <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 250px;" id="cctvSelect">
+                        <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                            style="width: 250px;" id="cctvSelect">
                             <option value="">-- Pilih CCTV untuk Menonton --</option>
                         </select>
                     </div>
@@ -236,19 +343,21 @@
                 <div class="dashboard-card">
                     <div class="card-header-custom">
                         <h4>Artikel Terbaru</h4>
-                        <a href="{{ url_for('read_artikel') }}" class="btn btn-sm btn-outline-secondary rounded-pill">Lihat Semua</a>
+                        <a href="{{ url_for('read_artikel') }}"
+                            class="btn btn-sm btn-outline-secondary rounded-pill">Lihat Semua</a>
                     </div>
                     <div>
                         {% for article in latest_articles %}
                         <a href="{{ url_for('view_artikel_detail', id=article.id) }}" class="article-item">
                             {% if article.gambar %}
-                                <img src="{{ url_for('static', filename='uploads/' + article.gambar) }}">
+                            <img src="{{ url_for('static', filename='uploads/' + article.gambar) }}">
                             {% else %}
-                                <img src="https://via.placeholder.com/70x50">
+                            <img src="https://via.placeholder.com/70x50">
                             {% endif %}
                             <div>
                                 <h6 class="mb-1 fw-bold small text-white">{{ article.judul }}</h6>
-                                <small class="text-muted" style="font-size: 0.7rem;">{{ article.tanggal.strftime('%d %b %Y') }}</small>
+                                <small class="text-muted" style="font-size: 0.7rem;">{{ article.tanggal.strftime('%d %b
+                                    %Y') }}</small>
                             </div>
                         </a>
                         {% endfor %}
@@ -258,12 +367,13 @@
         </div>
 
         <!-- BAGIAN 3: STATISTIK & ANALITIK (DENGAN FILTER CCTV KHUSUS) -->
-        
+
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="fw-bold text-white mb-0">Statistik & Analitik</h4>
-            
+
             <!-- DROPDOWN KHUSUS GRAFIK -->
-            <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 250px;" id="chartCctvSelect">
+            <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 250px;"
+                id="chartCctvSelect">
                 <option value="">-- Pilih CCTV untuk Grafik --</option>
                 <!-- Opsi akan diisi Javascript -->
             </select>
@@ -277,11 +387,14 @@
                         <h4>Tren Kepadatan</h4>
                         <!-- Filter Waktu -->
                         <div class="period-toggle">
-                            <input type="radio" id="t_hari" name="trafficPeriod" value="harian" checked onchange="changeTrafficPeriod(this.value)">
+                            <input type="radio" id="t_hari" name="trafficPeriod" value="harian" checked
+                                onchange="changeTrafficPeriod(this.value)">
                             <label for="t_hari">Hari</label>
-                            <input type="radio" id="t_minggu" name="trafficPeriod" value="mingguan" onchange="changeTrafficPeriod(this.value)">
+                            <input type="radio" id="t_minggu" name="trafficPeriod" value="mingguan"
+                                onchange="changeTrafficPeriod(this.value)">
                             <label for="t_minggu">Minggu</label>
-                            <input type="radio" id="t_bulan" name="trafficPeriod" value="bulanan" onchange="changeTrafficPeriod(this.value)">
+                            <input type="radio" id="t_bulan" name="trafficPeriod" value="bulanan"
+                                onchange="changeTrafficPeriod(this.value)">
                             <label for="t_bulan">Bulan</label>
                         </div>
                     </div>
@@ -298,11 +411,14 @@
                         <h4>Distribusi Kendaraan</h4>
                         <!-- Filter Waktu -->
                         <div class="period-toggle">
-                            <input type="radio" id="v_hari" name="vehiclePeriod" value="harian" checked onchange="changeVehiclePeriod(this.value)">
+                            <input type="radio" id="v_hari" name="vehiclePeriod" value="harian" checked
+                                onchange="changeVehiclePeriod(this.value)">
                             <label for="v_hari">Hari</label>
-                            <input type="radio" id="v_minggu" name="vehiclePeriod" value="mingguan" onchange="changeVehiclePeriod(this.value)">
+                            <input type="radio" id="v_minggu" name="vehiclePeriod" value="mingguan"
+                                onchange="changeVehiclePeriod(this.value)">
                             <label for="v_minggu">Minggu</label>
-                            <input type="radio" id="v_bulan" name="vehiclePeriod" value="bulanan" onchange="changeVehiclePeriod(this.value)">
+                            <input type="radio" id="v_bulan" name="vehiclePeriod" value="bulanan"
+                                onchange="changeVehiclePeriod(this.value)">
                             <label for="v_bulan">Bulan</label>
                         </div>
                     </div>
@@ -348,72 +464,67 @@
         {{ cctv_list | tojson }}
     </script>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         lucide.createIcons();
 
         // --- GLOBAL VARS ---
-        let currentFeedId = null; 
-        let currentChartId = null; 
+        let currentFeedId = ""; // Default kosong untuk "Semua CCTV"
+        let currentChartId = ""; // Default kosong untuk "Semua CCTV"
         let trafficPeriod = 'harian';
         let vehiclePeriod = 'harian';
         let trafficChartInstance = null;
         let vehicleChartInstance = null;
 
-        document.addEventListener('DOMContentLoaded', function() {
-            
-            // 1. Ambil Data CCTV
+        document.addEventListener('DOMContentLoaded', function () {
+
+            // 1. Ambil Data CCTV dari JSON Helper
             const rawData = document.getElementById('cctv-data').textContent;
             const cctvData = JSON.parse(rawData);
 
             const feedSelect = document.getElementById('cctvSelect');
             const chartSelect = document.getElementById('chartCctvSelect');
 
-            if(cctvData.length > 0) {
+            if (cctvData.length > 0) {
                 cctvData.forEach(cctv => {
                     // Isi Dropdown Player
-                    const optFeed = document.createElement('option');
-                    optFeed.value = cctv.id;
-                    optFeed.innerText = cctv.name;
+                    const optFeed = new Option(cctv.name, cctv.id);
                     optFeed.dataset.stream = cctv.stream_url;
                     feedSelect.appendChild(optFeed);
 
                     // Isi Dropdown Grafik
-                    const optChart = document.createElement('option');
-                    optChart.value = cctv.id;
-                    optChart.innerText = cctv.name;
-                    chartSelect.appendChild(optChart);
+                    chartSelect.appendChild(new Option(cctv.name, cctv.id));
                 });
             }
 
-            // 2. Inisialisasi Grafik Kosong & Reset Data
-            initEmptyCharts();
-            resetSummary();
+            // 2. Inisialisasi Tampilan Awal
+            fetchSummary(""); // Ambil data agregat semua CCTV saat pertama buka
+            updateCharts("");
 
-            // 3. Listener: Dropdown Video Player & Summary
-            feedSelect.addEventListener('change', function() {
+            // 3. Listener: Dropdown Video Player
+            feedSelect.addEventListener('change', function () {
                 currentFeedId = this.value;
-                if(!currentFeedId) {
-                    updatePlayer(""); 
-                    resetSummary(); 
-                    return;
-                }
-                const streamUrl = this.options[this.selectedIndex].dataset.stream;
+                const streamUrl = this.options[this.selectedIndex].dataset.stream || "";
                 updatePlayer(streamUrl);
-                
                 fetchSummary(currentFeedId);
             });
 
             // 4. Listener: Dropdown Grafik
-            chartSelect.addEventListener('change', function() {
+            chartSelect.addEventListener('change', function () {
                 currentChartId = this.value;
-                if (!currentChartId) {
-                    initEmptyCharts(); 
-                    return;
-                }
                 updateCharts(currentChartId);
             });
+
+            // --- PENTING: LOGIKA REAL-TIME POLLING (SINKRON DENGAN ADMIN) ---
+            // Jalankan update otomatis setiap 3 detik
+            setInterval(() => {
+                // Update Ringkasan Atas
+                fetchSummary(currentFeedId);
+
+                // Update Grafik (Batang & Lingkaran)
+                fetchTrafficChart(currentChartId, trafficPeriod);
+                fetchVehicleChart(currentChartId, vehiclePeriod);
+            }, 3000);
         });
 
         // --- CORE FUNCTIONS ---
@@ -421,7 +532,7 @@
         function updatePlayer(url) {
             const iframe = document.getElementById('mainCCTVPlayer');
             const placeholder = document.getElementById('cctvPlaceholder');
-            if(url) {
+            if (url) {
                 iframe.src = url;
                 iframe.classList.remove('d-none');
                 placeholder.classList.add('d-none');
@@ -432,24 +543,18 @@
             }
         }
 
-        // Reset data ke strip (-)
-        function resetSummary() {
-            document.getElementById('kendaraanHariIni').innerText = "-";
-            document.getElementById('kepadatanTertinggi').innerText = "-";
-            document.getElementById('rataRataKecepatan').innerText = "-";
-            document.getElementById('kameraAktif').innerText = "-";
-        }
-
         function fetchSummary(id) {
-            let url = `/api/public/dashboard_summary`;
-            if(id) url += `?cctv_id=${id}`; 
-            
-            fetch(url).then(res => res.json()).then(data => {
-                document.getElementById('kendaraanHariIni').innerText = data.kendaraan_hari_ini;
-                document.getElementById('kepadatanTertinggi').innerText = data.kepadatan_tertinggi;
-                document.getElementById('rataRataKecepatan').innerText = data.rata_rata_kecepatan;
-                document.getElementById('kameraAktif').innerText = data.kamera_aktif; 
-            }).catch(err => console.error("Error fetching summary:", err));
+            let url = `/api/public/dashboard_summary?cctv_id=${id}`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('kendaraanHariIni').innerText = data.kendaraan_hari_ini;
+                    document.getElementById('kepadatanTertinggi').innerText = data.kepadatan_tertinggi;
+                    document.getElementById('rataRataKecepatan').innerText = data.rata_rata_kecepatan;
+                    document.getElementById('kameraAktif').innerText = data.kamera_aktif;
+                })
+                .catch(err => console.error("Error fetching summary:", err));
         }
 
         function updateCharts(id) {
@@ -459,110 +564,86 @@
 
         function changeTrafficPeriod(period) {
             trafficPeriod = period;
-            if(currentChartId) fetchTrafficChart(currentChartId, period);
+            fetchTrafficChart(currentChartId, period);
         }
 
         function changeVehiclePeriod(period) {
             vehiclePeriod = period;
-            if(currentChartId) fetchVehicleChart(currentChartId, period);
-        }
-
-        // --- HELPER UNTUK UPDATE ANGKA DI LEGENDA ---
-        function updateLegend(values) {
-            // values harus urut: [Mobil, Motor, Bus, Truk]
-            const total = values.reduce((a, b) => a + b, 0);
-            const ids = ['val-mobil', 'val-motor', 'val-bus', 'val-truk'];
-            
-            ids.forEach((id, index) => {
-                const element = document.getElementById(id);
-                if(total === 0 || !values) {
-                    element.innerText = "-";
-                } else {
-                    const percentage = ((values[index] / total) * 100).toFixed(0) + "%";
-                    element.innerText = percentage;
-                }
-            });
+            fetchVehicleChart(currentChartId, period);
         }
 
         // --- CHART GENERATORS ---
 
-        function initEmptyCharts() {
-            // Render grafik kosong
-            renderTrafficChart([], []);
-            renderVehicleChart([], []);
-            updateLegend([0,0,0,0]); // Set text jadi (-)
-        }
-
         function fetchTrafficChart(id, period) {
-            let url = `/api/public/traffic_data?period=${period}`;
-            if(id) url += `&cctv_id=${id}`;
+            let url = `/api/public/traffic_data?period=${period}&cctv_id=${id}`;
 
             fetch(url).then(res => res.json()).then(data => {
-                renderTrafficChart(data.labels, data.kepadatan);
-            });
-        }
+                const ctx = document.getElementById('trafficChart').getContext('2d');
+                if (trafficChartInstance) trafficChartInstance.destroy();
 
-        function renderTrafficChart(labels, dataValues) {
-            const ctx = document.getElementById('trafficChart').getContext('2d');
-            if(trafficChartInstance) trafficChartInstance.destroy();
-
-            trafficChartInstance = new Chart(ctx, {
-                type: 'bar', 
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Kepadatan',
-                        data: dataValues,
-                        backgroundColor: '#00E5FF',
-                        borderRadius: 4,
-                        barThickness: 20
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, max: 100, grid: { color: '#333' }, ticks: { color: '#888' } },
-                        x: { grid: { display: false }, ticks: { color: '#888' } }
+                trafficChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Kepadatan (%)',
+                            data: data.kepadatan,
+                            backgroundColor: '#00E5FF',
+                            borderRadius: 4,
+                            barThickness: 20
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, max: 100, grid: { color: '#333' }, ticks: { color: '#888' } },
+                            x: { grid: { display: false }, ticks: { color: '#888' } }
+                        }
                     }
-                }
+                });
             });
         }
 
         function fetchVehicleChart(id, period) {
-            let url = `/api/public/vehicle_distribution?period=${period}`;
-            if(id) url += `&cctv_id=${id}`;
+            let url = `/api/public/vehicle_distribution?period=${period}&cctv_id=${id}`;
 
-            fetch(url).then(res => res.json()).then(data => {
-                renderVehicleChart(data.labels, data.data);
-                // Panggil update text legenda setelah data didapat
-                updateLegend(data.data);
-            });
-        }
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    const ctx = document.getElementById('vehicleChart').getContext('2d');
+                    if (vehicleChartInstance) vehicleChartInstance.destroy();
 
-        function renderVehicleChart(labels, dataValues) {
-            const ctx = document.getElementById('vehicleChart').getContext('2d');
-            if(vehicleChartInstance) vehicleChartInstance.destroy();
+                    vehicleChartInstance = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: data.labels,
+                            datasets: [{
+                                data: data.data,
+                                backgroundColor: ['#00E5FF', '#FFD600', '#00C853', '#FF5252'],
+                                borderWidth: 0,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '70%',
+                            plugins: { legend: { display: false } }
+                        }
+                    });
 
-            vehicleChartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: dataValues,
-                        backgroundColor: ['#00E5FF', '#FFD600', '#00C853', '#FF5252'],
-                        borderWidth: 0,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '70%',
-                    plugins: { legend: { display: false } }
-                }
-            });
+                    // --- PENTING: Update Teks Persentase di Samping Grafik ---
+                    if (data.percentages) {
+                        document.getElementById('val-mobil').innerText = data.percentages[0];
+                        document.getElementById('val-motor').innerText = data.percentages[1];
+                        document.getElementById('val-bus').innerText = data.percentages[2];
+                        document.getElementById('val-truk').innerText = data.percentages[3];
+                    }
+                })
+                .catch(err => console.error("Gagal update distribusi user:", err));
         }
     </script>
 </body>
+
 </html>

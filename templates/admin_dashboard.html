@@ -408,6 +408,50 @@
             border: 1px solid var(--border-color);
             color: white;
         }
+
+        /* Animasi Denyut Cepat */
+        @keyframes pulse-fast {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(0, 200, 83, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(0, 200, 83, 0);
+            }
+        }
+
+        .status-indicator {
+            width: 15px;
+            height: 15px;
+            background-color: #00C853;
+            border-radius: 50%;
+            /* Gunakan animasi pulse-fast dengan durasi 0.8s agar cepat */
+            animation: pulse-fast 0.8s infinite;
+        }
+
+        /* Pastikan kolom row memiliki tinggi yang sama */
+        .equal-height {
+            display: -webkit-flex;
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .equal-height>[class*='col-'] {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .equal-height .dashboard-card {
+            flex: 1;
+            /* Membuat card mengisi seluruh tinggi kolom */
+        }
     </style>
 </head>
 
@@ -598,22 +642,23 @@
                         <div style="height: 220px; width: 220px;">
                             <canvas id="vehicleChart"></canvas>
                         </div>
+
                         <div class="chart-legend-custom">
                             <div class="legend-item">
                                 <div><span class="legend-color" style="background: #00E5FF;"></span>Mobil</div>
-                                <span class="fw-bold">45%</span>
+                                <span class="fw-bold">0%</span> <!-- Angka ini yang akan diupdate JS -->
                             </div>
                             <div class="legend-item">
                                 <div><span class="legend-color" style="background: #FFD600;"></span>Motor</div>
-                                <span class="fw-bold">45%</span>
+                                <span class="fw-bold">0%</span>
                             </div>
                             <div class="legend-item">
                                 <div><span class="legend-color" style="background: #00C853;"></span>Bus</div>
-                                <span class="fw-bold">5%</span>
+                                <span class="fw-bold">0%</span>
                             </div>
                             <div class="legend-item">
                                 <div><span class="legend-color" style="background: #FF5252;"></span>Truk</div>
-                                <span class="fw-bold">5%</span>
+                                <span class="fw-bold">0%</span>
                             </div>
                         </div>
                     </div>
@@ -621,11 +666,12 @@
             </div>
         </div>
 
-        <!-- BAGIAN 4: MANAJEMEN KAMERA -->
-        <h4 class="mb-3 fw-bold text-white">Manajemen Kamera</h4>
-        <div class="row mb-5">
+        <!-- BAGIAN 4: MANAJEMEN KAMERA & STATUS SISTEM -->
+        <div class="row mb-5 g-4 equal-height">
+            <!-- KOLOM KIRI -->
             <div class="col-lg-8">
-                <div class="dashboard-card">
+                <h4 class="mb-3 fw-bold text-white">Manajemen Kamera</h4>
+                <div class="dashboard-card h-100">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div class="d-flex gap-2 w-100 me-3">
                             <input type="text" id="cameraSearchInput"
@@ -639,18 +685,23 @@
 
                     <div id="cameraListContainer">
                         {% for cctv in cctv_list %}
-                        <div class="camera-item">
-                            <div class="camera-thumb"><i data-lucide="play-circle" class="play-icon"></i></div>
+                        <div class="camera-item d-flex align-items-center p-3 mb-2"
+                            style="background: rgba(255,255,255,0.05); border-radius: 12px;">
+                            <div class="camera-thumb me-3 text-info"><i data-lucide="video"></i></div>
                             <div class="camera-info">
-                                <p class="camera-name">{{ cctv.name }}</p>
-                                <p class="camera-loc"><i data-lucide="map-pin" size="12"></i> ID: {{ cctv.id }} • {{
-                                    cctv.status }}</p>
+                                <p class="camera-name mb-0 fw-bold">{{ cctv.name }}</p>
+                                <p class="camera-loc mb-0 text-muted small"><i data-lucide="map-pin" size="12"></i> ID:
+                                    {{ cctv.id }} • Aktif</p>
                             </div>
-                            <div class="camera-actions">
-                                <button onclick="openEditModal('{{ cctv.name }}', '{{ cctv.stream_url }}')"><i
-                                        data-lucide="pencil" size="18"></i></button>
-                                <button class="btn-del" onclick="confirmDelete('{{ cctv.name }}')"><i
-                                        data-lucide="trash-2" size="18"></i></button>
+                            <div class="camera-actions ms-auto d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-info border-0"
+                                    onclick="openEditModal('{{ cctv.name }}', '{{ cctv.url }}')">
+                                    <i data-lucide="pencil" size="18"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger border-0"
+                                    onclick="confirmDelete('{{ cctv.name }}')">
+                                    <i data-lucide="trash-2" size="18"></i>
+                                </button>
                             </div>
                         </div>
                         {% endfor %}
@@ -658,329 +709,456 @@
                 </div>
             </div>
 
+            <!-- KOLOM KANAN -->
             <div class="col-lg-4">
-                <div class="dashboard-card server-status-card">
-                    <div class="status-indicator"></div>
+                <h4 class="mb-3 fw-bold text-white">Status Sistem</h4>
+                <!-- Tambahkan d-flex dan justify-content-center agar konten berada di tengah secara vertikal -->
+                <div
+                    class="dashboard-card server-status-card h-100 d-flex flex-column align-items-center justify-content-center">
+                    <div id="serverIndicator" class="status-indicator mb-3"></div>
                     <h5 class="text-white fw-bold mb-1">Server Status</h5>
-                    <p class="text-success fw-bold mb-3" style="letter-spacing: 1px;">ONLINE • STABIL</p>
-                    <div class="d-flex justify-content-between w-75 text-muted small">
-                        <span>Uptime</span> <span>99.9%</span>
+                    <p id="serverStatusText" class="text-success fw-bold mb-3" style="letter-spacing: 1px;">ONLINE •
+                        STABIL</p>
+
+                    <div class="d-flex justify-content-between w-75 text-muted small mb-2">
+                        <span>Uptime</span>
+                        <span id="serverUptime">0h 0m</span>
                     </div>
-                    <div class="status-bar-container">
-                        <div class="status-bar-fill"></div>
+
+                    <div class="status-bar-container mb-3"
+                        style="width: 80%; background: #333; height: 8px; border-radius: 10px; overflow: hidden;">
+                        <div id="stabilityBar" class="status-bar-fill"
+                            style="width: 99%; background: #00C853; height: 100%;"></div>
                     </div>
-                    <p class="text-muted small mt-3">Terakhir diperbarui: Baru saja</p>
+
+                    <p class="text-muted small">
+                        Terakhir diperbarui: <span id="lastServerUpdate">Baru saja</span>
+                    </p>
                 </div>
             </div>
         </div>
 
-    </div>
-
-    <!-- Modal Tambah/Edit Kamera -->
-    <div class="modal fade" id="addCameraModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-bottom-0">
-                    <h5 class="modal-title fw-bold">Form Data Kamera</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small">Nama Kamera</label>
-                            <input type="text" class="form-control" placeholder="Contoh: CCTV Simpang Lima">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small">URL Stream</label>
-                            <input type="text" class="form-control" placeholder="https://...">
-                        </div>
-                        <button type="submit" class="btn btn-info w-100 fw-bold">Simpan Data</button>
-                    </form>
+        <!-- Modal Tambah/Edit Kamera -->
+        <div class="modal fade" id="addCameraModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header border-bottom-0">
+                        <h5 class="modal-title fw-bold">Form Data Kamera</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Nama Kamera</label>
+                                <input type="text" class="form-control" placeholder="Contoh: CCTV Simpang Lima">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">URL Stream</label>
+                                <input type="text" class="form-control" placeholder="https://...">
+                            </div>
+                            <button type="submit" class="btn btn-info w-100 fw-bold">Simpan Data</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- JSON Data Helper -->
-    <script id="cctv-data" type="application/json">
+        <!-- JSON Data Helper -->
+        <script id="cctv-data" type="application/json">
         {{ cctv_list | tojson }}
     </script>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        lucide.createIcons();
+        <!-- Scripts -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            lucide.createIcons();
 
-        // --- GLOBAL VARS ---
-        let currentFeedId = null;
-        let currentChartId = null;
-        let trafficPeriod = 'harian';
-        let vehiclePeriod = 'harian';
-        let trafficChartInstance = null;
-        let vehicleChartInstance = null;
+            // --- GLOBAL VARS ---
+            let currentFeedId = null;
+            let currentChartId = null;
+            let trafficPeriod = 'harian';
+            let vehiclePeriod = 'harian';
+            let trafficChartInstance = null;
+            let vehicleChartInstance = null;
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const rawData = document.getElementById('cctv-data').textContent;
-            const cctvData = JSON.parse(rawData);
-            const feedSelect = document.getElementById('cctvSelect');
-            const chartSelect = document.getElementById('chartCctvSelect');
+            document.addEventListener('DOMContentLoaded', function () {
+                const rawData = document.getElementById('cctv-data').textContent;
+                const cctvData = JSON.parse(rawData);
+                const feedSelect = document.getElementById('cctvSelect');
+                const chartSelect = document.getElementById('chartCctvSelect');
 
-            if (cctvData.length > 0) {
-                cctvData.forEach(cctv => {
-                    let opt = new Option(cctv.name, cctv.id);
-                    opt.dataset.stream = cctv.stream_url;
-                    feedSelect.appendChild(opt);
+                if (cctvData.length > 0) {
+                    cctvData.forEach(cctv => {
+                        let opt = new Option(cctv.name, cctv.id);
+                        opt.dataset.stream = cctv.stream_url;
+                        feedSelect.appendChild(opt);
 
-                    let opt2 = new Option(cctv.name, cctv.id);
-                    chartSelect.appendChild(opt2);
+                        let opt2 = new Option(cctv.name, cctv.id);
+                        chartSelect.appendChild(opt2);
+                    });
+
+                    fetchSummary(null);
+                    updateCharts(null);
+                }
+
+                feedSelect.addEventListener('change', function () {
+                    currentFeedId = this.value;
+                    if (!currentFeedId) {
+                        updatePlayer("");
+                        fetchSummary(null);
+                        return;
+                    }
+                    const streamUrl = this.options[this.selectedIndex].dataset.stream;
+                    updatePlayer(streamUrl);
+
+                    // Fetch data summary awal
+                    fetchSummary(currentFeedId);
                 });
 
-                fetchSummary(null);
-                updateCharts(null);
+                chartSelect.addEventListener('change', function () {
+                    currentChartId = this.value;
+                    updateCharts(currentChartId);
+                });
+            });
+
+            // --- FUNGSI PLAYER ---
+            function updatePlayer(url) {
+                const iframe = document.getElementById('mainCCTVPlayer');
+                const placeholder = document.getElementById('cctvPlaceholder');
+                // Reset Tampilan Analisis jika ganti video
+                closeAnalysis();
+
+                if (url) {
+                    iframe.src = url;
+                    iframe.classList.remove('d-none');
+                    placeholder.classList.add('d-none');
+                } else {
+                    iframe.src = "";
+                    iframe.classList.add('d-none');
+                    placeholder.classList.remove('d-none');
+                }
             }
 
-            feedSelect.addEventListener('change', function () {
-                currentFeedId = this.value;
+            // --- FUNGSI DETEKSI AI (UPDATED: LIVE STREAMING YOLO11) ---
+            function performAnalysis() {
                 if (!currentFeedId) {
-                    updatePlayer("");
-                    fetchSummary(null);
+                    alert("Pilih CCTV terlebih dahulu!");
                     return;
                 }
-                const streamUrl = this.options[this.selectedIndex].dataset.stream;
-                updatePlayer(streamUrl);
 
-                // Fetch data summary awal
-                fetchSummary(currentFeedId);
-            });
+                const analysisResult = document.getElementById('analysisResult');
+                const loadingOverlay = document.getElementById('loadingAnalysis');
+                const analyzedImg = document.getElementById('analyzedImage');
+                const analysisText = document.getElementById('analysisText');
 
-            chartSelect.addEventListener('change', function () {
-                currentChartId = this.value;
-                updateCharts(currentChartId);
-            });
-        });
+                // 1. Tampilkan container utama dan loading
+                analysisResult.style.display = 'flex';
+                loadingOverlay.style.display = 'flex';
+                analysisText.innerText = "Menghubungkan ke YOLO11 Engine...";
 
-        // --- FUNGSI PLAYER ---
-        function updatePlayer(url) {
-            const iframe = document.getElementById('mainCCTVPlayer');
-            const placeholder = document.getElementById('cctvPlaceholder');
-            // Reset Tampilan Analisis jika ganti video
-            closeAnalysis();
+                // 2. Bersihkan source gambar lama untuk mencegah glitch
+                analyzedImg.src = "";
 
-            if (url) {
-                iframe.src = url;
-                iframe.classList.remove('d-none');
-                placeholder.classList.add('d-none');
-            } else {
-                iframe.src = "";
-                iframe.classList.add('d-none');
-                placeholder.classList.remove('d-none');
-            }
-        }
+                // 3. Set URL Stream ke Backend Flask
+                // Pastikan di app.py route-nya adalah /video_feed
+                const streamUrl = `/video_feed?cctv_id=${currentFeedId}&t=${new Date().getTime()}`;
 
-        // --- FUNGSI DETEKSI AI (UPDATED: LIVE STREAMING YOLO11) ---
-        function performAnalysis() {
-            if (!currentFeedId) {
-                alert("Pilih CCTV terlebih dahulu!");
-                return;
-            }
+                // Mulai memuat stream
+                analyzedImg.src = streamUrl;
 
-            const analysisResult = document.getElementById('analysisResult');
-            const loadingOverlay = document.getElementById('loadingAnalysis');
-            const analyzedImg = document.getElementById('analyzedImage');
-            const analysisText = document.getElementById('analysisText');
+                // 4. Handler saat stream berhasil tersambung (Frame pertama diterima)
+                analyzedImg.onload = function () {
+                    loadingOverlay.style.display = 'none';
+                    analysisText.innerText = "Live Streaming Deteksi (YOLO11) Aktif";
+                    console.log("Stream AI berhasil dimuat.");
+                };
 
-            // 1. Tampilkan container utama dan loading
-            analysisResult.style.display = 'flex';
-            loadingOverlay.style.display = 'flex';
-            analysisText.innerText = "Menghubungkan ke YOLO11 Engine...";
+                // 5. Handler jika terjadi error (Server mati atau URL salah)
+                analyzedImg.onerror = function () {
+                    loadingOverlay.style.display = 'none';
+                    analysisResult.style.display = 'none'; // Sembunyikan kembali karena gagal
+                    alert("Gagal memuat stream deteksi. \n1. Pastikan Flask Backend sudah dijalankan. \n2. Pastikan file yolo11n.pt ada di folder project.");
+                };
 
-            // 2. Bersihkan source gambar lama untuk mencegah glitch
-            analyzedImg.src = "";
+                // 6. Polling Statistik Angka (Mobil, Motor, dll)
+                // Karena stream video tidak mengirim data angka, kita ambil terpisah setiap 3 detik
+                if (window.statsInterval) clearInterval(window.statsInterval);
 
-            // 3. Set URL Stream ke Backend Flask
-            // Pastikan di app.py route-nya adalah /video_feed
-            const streamUrl = `/video_feed?cctv_id=${currentFeedId}&t=${new Date().getTime()}`;
-
-            // Mulai memuat stream
-            analyzedImg.src = streamUrl;
-
-            // 4. Handler saat stream berhasil tersambung (Frame pertama diterima)
-            analyzedImg.onload = function () {
-                loadingOverlay.style.display = 'none';
-                analysisText.innerText = "Live Streaming Deteksi (YOLO11) Aktif";
-                console.log("Stream AI berhasil dimuat.");
-            };
-
-            // 5. Handler jika terjadi error (Server mati atau URL salah)
-            analyzedImg.onerror = function () {
-                loadingOverlay.style.display = 'none';
-                analysisResult.style.display = 'none'; // Sembunyikan kembali karena gagal
-                alert("Gagal memuat stream deteksi. \n1. Pastikan Flask Backend sudah dijalankan. \n2. Pastikan file yolo11n.pt ada di folder project.");
-            };
-
-            // 6. Polling Statistik Angka (Mobil, Motor, dll)
-            // Karena stream video tidak mengirim data angka, kita ambil terpisah setiap 3 detik
-            if (window.statsInterval) clearInterval(window.statsInterval);
-
-            window.statsInterval = setInterval(() => {
-                // Hanya update jika overlay deteksi sedang terbuka
-                if (analysisResult.style.display === 'flex') {
-                    updateStatsOnly(currentFeedId);
-                } else {
-                    clearInterval(window.statsInterval);
-                }
-            }, 3000);
-        }
-
-        // Fungsi pembantu untuk update angka di kartu dashboard
-        function updateStatsOnly(id) {
-            fetch(`/api/admin/dashboard_summary?cctv_id=${id}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data) {
-                        document.getElementById('kendaraanHariIni').innerText = data.kendaraan_hari_ini || 0;
-                        document.getElementById('kepadatanTertinggi').innerText = (data.kepadatan_tertinggi || 0) + "%";
-                        document.getElementById('rataRataKecepatan').innerText = data.rata_rata_kecepatan || "0 km/j";
-
-                        // Update teks kecil di bawah video stream
-                        // Anda bisa menyesuaikan ini dengan data dari backend jika tersedia
-                        // document.getElementById('analysisText').innerText = `Live: ${data.kendaraan_hari_ini} Kendaraan Terdeteksi`;
+                window.statsInterval = setInterval(() => {
+                    // Hanya update jika overlay deteksi sedang terbuka
+                    if (analysisResult.style.display === 'flex') {
+                        updateStatsOnly(currentFeedId);
+                    } else {
+                        clearInterval(window.statsInterval);
                     }
-                })
-                .catch(err => console.error("Gagal update statistik:", err));
-        }
-
-        // JANGAN LUPA: Update fungsi closeAnalysis agar streaming berhenti saat ditutup
-        function closeAnalysis() {
-            const img = document.getElementById('analyzedImage');
-            img.src = ""; // Menghentikan request stream ke server
-            document.getElementById('analysisResult').style.display = 'none';
-
-            // Hentikan polling statistik
-            if (window.statsInterval) clearInterval(window.statsInterval);
-        }
-
-        function closeAnalysis() {
-            document.getElementById('analysisResult').style.display = 'none';
-        }
-
-        // Variable global untuk menyimpan ID CCTV yang sedang aktif
-
-        function fetchSummary(id) {
-            if (!id) return; // Jangan panggil jika ID kosong
-
-            fetch(`/api/admin/dashboard_summary?cctv_id=${id}`)
-                .then(res => res.json())
-                .then(data => {
-                    // Update elemen HTML berdasarkan ID-nya
-                    document.getElementById('kendaraanHariIni').innerText = data.kendaraan_hari_ini;
-                    document.getElementById('kepadatanTertinggi').innerText = data.kepadatan_tertinggi + "%";
-                    document.getElementById('rataRataKecepatan').innerText = data.rata_rata_kecepatan;
-                    document.getElementById('kameraAktif').innerText = data.kamera_aktif;
-                })
-                .catch(err => console.error("Error Dashboard:", err));
-        }
-
-        // PENTING: Jalankan update setiap 2 detik agar angka bergerak otomatis
-        setInterval(() => {
-            // Ambil ID dari dropdown CCTV yang sedang dipilih
-            const selectedId = document.getElementById('cctvSelect').value;
-            if (selectedId) {
-                fetchSummary(selectedId);
+                }, 3000);
             }
-        }, 2000);
 
-        function updateCharts(id) {
-            fetchTrafficChart(id, trafficPeriod);
-            fetchVehicleChart(id, vehiclePeriod);
-        }
+            // Fungsi pembantu untuk update angka di kartu dashboard
+            function updateStatsOnly(id) {
+                fetch(`/api/admin/dashboard_summary?cctv_id=${id}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data) {
+                            document.getElementById('kendaraanHariIni').innerText = data.kendaraan_hari_ini || 0;
+                            document.getElementById('kepadatanTertinggi').innerText = (data.kepadatan_tertinggi || 0) + "%";
+                            document.getElementById('rataRataKecepatan').innerText = data.rata_rata_kecepatan || "0 km/j";
 
-        function changeTrafficPeriod(period) {
-            trafficPeriod = period;
-            fetchTrafficChart(currentChartId, period);
-        }
-
-        function changeVehiclePeriod(period) {
-            vehiclePeriod = period;
-            fetchVehicleChart(currentChartId, period);
-        }
-
-        // --- CHART GENERATORS ---
-
-        function fetchTrafficChart(id, period) {
-            let url = `/api/admin/traffic_data?period=${period}`;
-            if (id) url += `&cctv_id=${id}`;
-
-            fetch(url).then(res => res.json()).then(data => {
-                const ctx = document.getElementById('trafficChart').getContext('2d');
-                if (trafficChartInstance) trafficChartInstance.destroy();
-
-                trafficChartInstance = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.labels,
-                        datasets: [{
-                            label: 'Kepadatan',
-                            data: data.kepadatan,
-                            backgroundColor: '#00E5FF',
-                            borderRadius: 4,
-                            barThickness: 20
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, max: 100, grid: { color: '#333', borderDash: [5, 5] }, ticks: { color: '#888' } },
-                            x: { grid: { display: false }, ticks: { color: '#888' } }
+                            // Update teks kecil di bawah video stream
+                            // Anda bisa menyesuaikan ini dengan data dari backend jika tersedia
+                            // document.getElementById('analysisText').innerText = `Live: ${data.kendaraan_hari_ini} Kendaraan Terdeteksi`;
                         }
+                    })
+                    .catch(err => console.error("Gagal update statistik:", err));
+            }
+
+            // JANGAN LUPA: Update fungsi closeAnalysis agar streaming berhenti saat ditutup
+            function closeAnalysis() {
+                const img = document.getElementById('analyzedImage');
+                img.src = ""; // Menghentikan request stream ke server
+                document.getElementById('analysisResult').style.display = 'none';
+
+                // Hentikan polling statistik
+                if (window.statsInterval) clearInterval(window.statsInterval);
+            }
+
+            function closeAnalysis() {
+                document.getElementById('analysisResult').style.display = 'none';
+            }
+
+            // Variable global untuk menyimpan ID CCTV yang sedang aktif
+
+            function fetchSummary(id) {
+                if (!id) return; // Jangan panggil jika ID kosong
+
+                fetch(`/api/admin/dashboard_summary?cctv_id=${id}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        // Update elemen HTML berdasarkan ID-nya
+                        document.getElementById('kendaraanHariIni').innerText = data.kendaraan_hari_ini;
+                        document.getElementById('rataRataKecepatan').innerText = data.rata_rata_kecepatan;
+                        document.getElementById('kameraAktif').innerText = data.kamera_aktif;
+                    })
+                    .catch(err => console.error("Error Dashboard:", err));
+            }
+
+            // --- LOGIKA UPDATE OTOMATIS (REAL-TIME POLLING) ---
+            setInterval(() => {
+                // 1. Ambil ID dari dropdown Statistik & Analitik (Diagram Batang & Lingkaran)
+                const selectedId = document.getElementById('chartCctvSelect').value;
+
+                // Update Grafik Batang (Data History)
+                // Data ini tetap muncul meski CCTV OFF karena mengambil dari riwayat Firebase
+                fetchTrafficChart(chartCctvId, 'harian');
+
+                // Update Grafik Lingkaran (Data Cumulative)
+                // Menampilkan perbandingan kendaraan yang pernah terdeteksi (tidak akan nol)
+                fetchVehicleChart(chartCctvId, 'harian');
+
+                // 2. Ambil ID dari dropdown Live Feed (Kartu Ringkasan Atas)
+                const summaryCctvId = document.getElementById('cctvSelect').value;
+
+                // Jika ada CCTV yang sedang dipilih untuk ditonton, update kartu ringkasannya
+                // Jika tidak ada, fetchSummary("") akan mengambil akumulasi semua CCTV
+                fetchSummary(summaryCctvId);
+
+                console.log("Sinkronisasi Firebase: Data diperbarui...");
+            }, 5000); // Update setiap 5 detik
+
+            function updateCharts(id) {
+                fetchTrafficChart(id, trafficPeriod);
+                fetchVehicleChart(id, vehiclePeriod);
+            }
+
+            function changeTrafficPeriod(period) {
+                trafficPeriod = period; // 'harian', 'mingguan', atau 'bulanan'
+                fetchTrafficChart(currentChartId, period);
+
+                // Update juga grafik lingkaran agar sinkron periodenya
+                fetchVehicleChart(currentChartId, period);
+            }
+
+            function changeVehiclePeriod(period) {
+                vehiclePeriod = period;
+                fetchVehicleChart(currentChartId, period);
+            }
+
+            function fetchTrafficChart(id, period) {
+                let url = `/api/admin/traffic_data?period=${period}`;
+                if (id) url += `&cctv_id=${id}`;
+
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        const ctx = document.getElementById('trafficChart').getContext('2d');
+
+                        // Hapus chart lama agar tidak tumpang tindih
+                        if (trafficChartInstance) trafficChartInstance.destroy();
+
+                        trafficChartInstance = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: data.labels, // Akan berisi Jam:Menit dari Firebase History
+                                datasets: [{
+                                    label: 'Kepadatan (%)',
+                                    data: data.kepadatan, // Berisi persentase kepadatan (0-100)
+                                    backgroundColor: '#00E5FF',
+                                    borderRadius: 4,
+                                    barThickness: 'flex',
+                                    maxBarThickness: 25
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function (context) {
+                                                return `Kepadatan: ${context.raw}%`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        max: 100, // Sumbu Y maksimal 100%
+                                        grid: { color: '#333', borderDash: [5, 5] },
+                                        ticks: {
+                                            color: '#888',
+                                            callback: function (value) { return value + "%" }
+                                        }
+                                    },
+                                    x: {
+                                        grid: { display: false },
+                                        ticks: { color: '#888', maxRotation: 45, minRotation: 45 }
+                                    }
+                                }
+                            }
+                        });
+                    })
+                    .catch(err => console.error("Gagal update grafik tren:", err));
+            }
+
+            function fetchVehicleChart(id, period) {
+                // Jika id kosong, Flask akan menganggap "Semua Data CCTV"
+                let url = `/api/admin/vehicle_distribution?period=${period}`;
+                if (id) url += `&cctv_id=${id}`;
+
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log("Data Distribusi Diterima:", data); // Debugging di Console
+
+                        const ctx = document.getElementById('vehicleChart').getContext('2d');
+
+                        // 1. Hancurkan chart lama agar tidak tumpang tindih visual
+                        if (vehicleChartInstance) vehicleChartInstance.destroy();
+
+                        // 2. Gambar Chart baru
+                        vehicleChartInstance = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: data.labels, // ['Mobil', 'Motor', 'Bus', 'Truk']
+                                datasets: [{
+                                    data: data.data, // Angka jumlah kendaraan asli
+                                    backgroundColor: ['#00E5FF', '#FFD600', '#00C853', '#FF5252'],
+                                    borderWidth: 0,
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                cutout: '70%',
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: { enabled: true }
+                                }
+                            }
+                        });
+
+                        // 3. UPDATE TEKS PERSENTASE (LEGEND) DI SEBELAH KANAN
+                        // Fungsi ini akan menyisir elemen span.fw-bold dan menggantinya dengan data Firebase
+                        const legendValues = document.querySelectorAll('.chart-legend-custom .legend-item span.fw-bold');
+
+                        if (data.percentages && legendValues.length >= 4) {
+                            // Pastikan urutan data.percentages sesuai: [Mobil, Motor, Bus, Truk]
+                            legendValues[0].innerText = data.percentages[0]; // Ganti 45% jadi data asli
+                            legendValues[1].innerText = data.percentages[1];
+                            legendValues[2].innerText = data.percentages[2];
+                            legendValues[3].innerText = data.percentages[3];
+                        }
+                    })
+                    .catch(err => console.error("Gagal update grafik distribusi:", err));
+            }
+
+            // --- CRUD UI Functions ---
+
+            // 1. FUNGSI PENCARIAN (TAMBAHKAN INI)
+            document.getElementById('cameraSearchInput').addEventListener('input', function () {
+                const keyword = this.value.toLowerCase(); // Ambil kata kunci dan ubah ke huruf kecil
+                const cameraItems = document.querySelectorAll('.camera-item'); // Ambil semua baris kamera
+
+                cameraItems.forEach(item => {
+                    // Ambil teks Nama dan Info (ID/Lokasi) dari baris tersebut
+                    const name = item.querySelector('.camera-name').innerText.toLowerCase();
+                    const info = item.querySelector('.camera-loc').innerText.toLowerCase();
+
+                    // Jika keyword ditemukan di Nama atau Info
+                    if (name.includes(keyword) || info.includes(keyword)) {
+                        item.style.setProperty('display', 'flex', 'important'); // Tampilkan
+                    } else {
+                        item.style.setProperty('display', 'none', 'important'); // Sembunyikan
                     }
                 });
             });
-        }
 
-        function fetchVehicleChart(id, period) {
-            let url = `/api/admin/vehicle_distribution?period=${period}`;
-            if (id) url += `&cctv_id=${id}`;
+            // 2. FUNGSI EDIT MODAL
+            function openEditModal(name, url) {
+                const modal = new bootstrap.Modal(document.getElementById('addCameraModal'));
+                document.querySelector('#addCameraModal .modal-title').innerText = "Edit Kamera";
 
-            fetch(url).then(res => res.json()).then(data => {
-                const ctx = document.getElementById('vehicleChart').getContext('2d');
-                if (vehicleChartInstance) vehicleChartInstance.destroy();
+                // Cari input berdasarkan placeholder atau gunakan ID jika Anda sudah menambahkannya di HTML
+                const nameInput = document.querySelector('#addCameraModal input[placeholder*="CCTV"]');
+                const urlInput = document.querySelector('#addCameraModal input[placeholder*="https"]');
 
-                vehicleChartInstance = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: data.labels,
-                        datasets: [{
-                            data: data.data,
-                            backgroundColor: ['#00E5FF', '#FFD600', '#00C853', '#FF5252'],
-                            borderWidth: 0,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '70%',
-                        plugins: { legend: { display: false } }
-                    }
-                });
-            });
-        }
+                if (nameInput) nameInput.value = name;
+                if (urlInput) urlInput.value = url;
 
-        // --- CRUD UI Functions ---
-        function openEditModal(name, url) {
-            const modal = new bootstrap.Modal(document.getElementById('addCameraModal'));
-            document.querySelector('#addCameraModal .modal-title').innerText = "Edit Kamera";
-            document.querySelector('#addCameraModal input[placeholder="Contoh: CCTV Simpang Lima"]').value = name;
-            document.querySelector('#addCameraModal input[placeholder="https://..."]').value = url;
-            modal.show();
-        }
+                modal.show();
+            }
 
-        function confirmDelete(name) {
-            if (confirm(`Hapus kamera "${name}"?`)) alert('Data dihapus (Simulasi)');
-        }
-    </script>
+            // 3. FUNGSI HAPUS
+            function confirmDelete(name) {
+                if (confirm(`Hapus kamera "${name}"?`)) {
+                    // Logika hapus data (Contoh simulasi)
+                    alert(`Kamera "${name}" berhasil dihapus.`);
+                    // Di sini biasanya Anda akan melakukan fetch('/api/delete_camera/...')
+                }
+            }
+
+            // --- SERVER STATUS POLLING ---
+            function updateServerStatus() {
+                fetch('/api/admin/server_status')
+                    .then(res => res.json())
+                    .then(data => {
+                        document.getElementById('serverUptime').innerText = data.uptime;
+                        document.getElementById('stabilityBar').style.width = data.stability + "%";
+                        document.getElementById('lastServerUpdate').innerText = data.last_update;
+                    })
+                    .catch(err => {
+                        const indicator = document.getElementById('serverIndicator');
+                        if (indicator) indicator.style.backgroundColor = "#ff5252";
+                        document.getElementById('serverStatusText').innerText = "OFFLINE • ERROR";
+                    });
+            }
+
+            // Jalankan setiap 10 detik
+            setInterval(updateServerStatus, 10000);
+            updateServerStatus();
+        </script>
 </body>
 
 </html>
