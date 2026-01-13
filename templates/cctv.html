@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="id">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +13,8 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
 
     <style>
         :root {
@@ -39,25 +41,31 @@
             backdrop-filter: blur(10px);
             border-bottom: 1px solid #333;
         }
+
         .navbar-brand {
             font-weight: 700;
             color: var(--accent-cyan) !important;
             letter-spacing: 1px;
         }
+
         .navbar-nav .nav-link {
             color: var(--text-main) !important;
             margin-right: 15px;
             transition: 0.3s;
         }
-        .navbar-nav .nav-link:hover, .navbar-nav .nav-link.active {
+
+        .navbar-nav .nav-link:hover,
+        .navbar-nav .nav-link.active {
             color: var(--accent-cyan) !important;
         }
+
         .btn-outline-custom {
             color: var(--accent-cyan);
             border-color: var(--accent-cyan);
             border-radius: 50px;
             font-weight: 600;
         }
+
         .btn-outline-custom:hover {
             background-color: var(--accent-cyan);
             color: #000;
@@ -68,6 +76,7 @@
             text-align: center;
             margin-bottom: 40px;
         }
+
         .page-title {
             font-weight: 800;
             font-size: 2.5rem;
@@ -77,6 +86,7 @@
             -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
         }
+
         .page-subtitle {
             color: var(--text-muted);
             font-size: 1rem;
@@ -87,14 +97,16 @@
             width: 100%;
             padding-bottom: 50px;
         }
-        
+
         .map-container {
             border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); /* Shadow lebih kuat */
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            /* Shadow lebih kuat */
             border: 2px solid #333;
             position: relative;
-            height: 75vh; /* Tinggi peta */
+            height: 75vh;
+            /* Tinggi peta */
             width: 100%;
         }
 
@@ -108,19 +120,23 @@
         .leaflet-popup-content-wrapper {
             border-radius: 10px;
             padding: 5px;
-            box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
         }
+
         .leaflet-popup-content {
             margin: 10px;
             text-align: center;
             width: 260px !important;
         }
+
         .popup-title {
             font-weight: 700;
             font-size: 1rem;
-            color: #333; /* Warna gelap karena background popup putih (standar) */
+            color: #333;
+            /* Warna gelap karena background popup putih (standar) */
             margin-bottom: 5px;
         }
+
         .popup-video iframe {
             width: 100%;
             height: 145px;
@@ -129,6 +145,7 @@
             background: #000;
             margin-top: 5px;
         }
+
         .btn-popup {
             display: block;
             background-color: var(--accent-cyan);
@@ -152,6 +169,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <!-- NAVBAR -->
@@ -162,13 +180,6 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('static_page') }}">Statistik</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('read_artikel') }}">Artikel</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">Tentang Kami</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('cctv_page') }}">Peta CCTV</a></li>
-                </ul>
                 <a href="{{ url_for('login') }}" class="btn btn-outline-custom ms-lg-3">Login Admin</a>
             </div>
         </div>
@@ -201,58 +212,93 @@
     <script>
         lucide.createIcons();
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // 1. Inisialisasi Peta
-            // Default view di Jawa Tengah (bisa disesuaikan koordinatnya)
-            var map = L.map('map').setView([-6.9932, 110.4203], 9); 
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. Inisialisasi Peta (Titik tengah di antara Demak & Pontianak atau Indonesia Tengah)
+            var map = L.map('map').setView([-2.5489, 118.0149], 5);
 
-            // 2. Tile Layer STANDARD (Hijau/Colorful seperti Index)
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
 
-            // 3. Ambil Data Marker CCTV dari API
-            fetch('/api/cctv_locations')
-                .then(response => response.json())
-                .then(data => {
-                    var markers = [];
+            var markerGroup = L.layerGroup().addTo(map);
 
-                    if (data.length === 0) {
-                        return;
-                    }
+            function updateMapMarkers() {
+                fetch('/api/cctv_locations')
+                    .then(res => res.json())
+                    .then(data => {
+                        // Simpan referensi popup yang sedang terbuka agar tidak tertutup saat refresh
+                        const openedPopupId = map._popup && map._popup._source ? map._popup._source.options.id : null;
 
-                    data.forEach(cctv => {
-                        // Pastikan koordinat ada
-                        if (cctv.lat && cctv.lon) {
-                            
-                            // Isi Popup: Nama, Status, dan Video Iframe
+                        markerGroup.clearLayers(); // Hapus marker lama
+                        var allMarkers = [];
+
+                        data.forEach(cctv => {
+                            // SINKRONISASI KEY: Sesuaikan dengan JSON dari Python (status_lalin)
+                            const status = cctv.status_lalin || 'Lancar';
+                            const total = cctv.total_sekarang || 0;
+
+                            // Tentukan Warna berdasarkan status dari Firebase
+                            let color = '#00C853'; // Hijau (Lancar)
+                            if (status === 'Padat') color = '#FFD600'; // Kuning
+                            if (status === 'Macet') color = '#FF5252'; // Merah
+
+                            // Buat Circle Marker
+                            var marker = L.circleMarker([cctv.lat, cctv.lon], {
+                                id: cctv.id, // Simpan ID untuk pengecekan popup
+                                radius: 10,
+                                fillColor: color,
+                                color: "#fff",
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            });
+
+                            // Isi Popup dengan data terbaru
                             var popupContent = `
-                                <div>
-                                    <div class="popup-title">${cctv.name}</div>
-                                    <span class="badge bg-success">Status: ${cctv.status}</span>
-                                    <div class="popup-video">
-                                        <iframe src="${cctv.stream_url}" allowfullscreen></iframe>
-                                    </div>
-                                    <a href="${cctv.stream_url}" target="_blank" class="btn-popup">Buka Layar Penuh</a>
-                                </div>
-                            `;
+                    <div style="min-width: 220px; font-family: 'Poppins', sans-serif; text-align: center;">
+                        <strong style="color:#333; font-size:14px;">${cctv.name}</strong><br>
+                        <div class="mt-2 mb-2">
+                            <span class="badge" style="background-color:${color}; color:${color === '#FFD600' ? '#000' : '#fff'}; width:100%; padding: 6px;">
+                                KONDISI: ${status.toUpperCase()}
+                            </span>
+                        </div>
+                        <div style="background:#000; border-radius:8px; overflow:hidden; line-height: 0;">
+                            <iframe src="${cctv.stream_url}" frameborder="0" style="width:100%; height:120px;"></iframe>
+                        </div>
+                        <div class="mt-2" style="color: #666; font-size: 13px;">
+                            Terdeteksi: <b style="color: #333; font-size: 15px;">${total}</b> Kendaraan
+                        </div>
+                        <a href="/dashboard" class="btn btn-sm btn-info w-100 mt-2 text-white" style="font-size:11px; border-radius: 5px;">Buka Analitik</a>
+                    </div>
+                `;
 
-                            var marker = L.marker([cctv.lat, cctv.lon])
-                                .bindPopup(popupContent)
-                                .addTo(map);
-                            
-                            markers.push(marker);
+                            marker.bindPopup(popupContent);
+                            markerGroup.addLayer(marker);
+                            allMarkers.push(marker);
+
+                            // Jika marker ini yang popuonya terbuka tadi, buka kembali
+                            if (openedPopupId === cctv.id) {
+                                marker.openPopup();
+                            }
+                        });
+
+                        // Auto-zoom hanya saat pertama kali load
+                        if (window.isFirstLoad === undefined && allMarkers.length > 0) {
+                            var group = new L.featureGroup(allMarkers);
+                            map.fitBounds(group.getBounds(), { padding: [50, 50] });
+                            window.isFirstLoad = false;
                         }
-                    });
+                    })
+                    .catch(err => console.error("Gagal sinkronisasi peta:", err));
+            }
 
-                    // Fit Bounds (Auto Zoom agar semua marker terlihat)
-                    if (markers.length > 0) {
-                        var group = new L.featureGroup(markers);
-                        map.fitBounds(group.getBounds(), { padding: [50, 50] });
-                    }
-                })
-                .catch(err => console.error("Gagal memuat peta:", err));
+            // Jalankan update pertama kali
+            updateMapMarkers();
+
+            // REFRESH STATUS SETIAP 5 DETIK (Real-time Sync)
+            setInterval(updateMapMarkers, 5000);
         });
     </script>
 </body>
+
 </html>

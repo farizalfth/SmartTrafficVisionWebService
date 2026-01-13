@@ -220,10 +220,12 @@
 
         .legend-item {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            font-size: 0.9rem;
-            width: 100%;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            margin-bottom: 10px;
         }
 
         .legend-color {
@@ -270,12 +272,6 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('dashboard') }}">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('read_artikel') }}">Artikel</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cctv_page') }}">Peta CCTV</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">Tentang Kami</a></li>
-                </ul>
                 <a href="{{ url_for('login') }}" class="btn btn-outline-light ms-lg-3">Login Admin</a>
             </div>
         </div>
@@ -369,7 +365,6 @@
         <!-- BAGIAN 3: STATISTIK & ANALITIK (USER VIEW) -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="fw-bold text-white mb-0">Statistik & Analitik</h4>
-            <!-- DROPDOWN KHUSUS GRAFIK -->
             <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 250px;"
                 id="chartCctvSelect">
                 <option value="">Semua Data CCTV</option>
@@ -377,11 +372,12 @@
         </div>
 
         <div class="row g-4 mb-5">
-            <!-- KIRI: Tren Kepadatan -->
+            <!-- KIRI: Laporan Data Kendaraan (Tinggi 850px) -->
             <div class="col-lg-7">
-                <div class="dashboard-card" style="min-height: 480px;">
+                <div class="dashboard-card"
+                    style="height: 850px; display: flex; flex-direction: column; overflow: hidden;">
                     <div class="card-header-custom">
-                        <h4>Tren Kepadatan</h4>
+                        <h4 class="fw-bold">Laporan Data Kendaraan</h4>
                         <div class="period-toggle">
                             <input type="radio" id="t_hari" name="trafficPeriod" value="harian" checked
                                 onchange="changeTrafficPeriod(this.value)">
@@ -394,7 +390,8 @@
                             <label for="t_bulan">Bulan</label>
                         </div>
                     </div>
-                    <div style="height: 320px; position: relative;">
+                    <!-- Area Grafik: Kunci tinggi di 650px agar label multi-baris muat -->
+                    <div style="height: 650px; width: 100%; position: relative;">
                         <canvas id="trafficChart"></canvas>
                     </div>
                 </div>
@@ -402,7 +399,8 @@
 
             <!-- KANAN: Distribusi Kendaraan (REAL TIME) -->
             <div class="col-lg-5">
-                <div class="dashboard-card" style="min-height: 480px;">
+                <div class="dashboard-card"
+                    style="height: 850px; display: flex; flex-direction: column; overflow: hidden;">
                     <div class="card-header-custom">
                         <h4>Distribusi Kendaraan</h4>
                         <span class="badge rounded-pill text-dark"
@@ -410,36 +408,30 @@
                             TIME</span>
                     </div>
                     <div class="d-flex flex-column align-items-center justify-content-center h-100">
-                        <!-- Container Canvas agar tidak render ke bawah terus -->
-                        <div style="height: 240px; width: 240px; position: relative;" class="mb-4">
+                        <div style="height: 280px; width: 280px; position: relative;" class="mb-5">
                             <canvas id="vehicleChart"></canvas>
                         </div>
-
-                        <!-- Legend dengan Spasi yang Rapi (Flexbox) -->
+                        <!-- Legend dengan Spasi Rata Kanan-Kiri -->
                         <div class="chart-legend-custom w-100 px-4">
-                            <div class="legend-item d-flex justify-content-between align-items-center mb-2">
-                                <div><span class="legend-color"
-                                        style="background: #00E5FF; width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:8px;"></span>Mobil
-                                </div>
-                                <span class="fw-bold text-info" id="val-mobil">0%</span>
+                            <div class="legend-item d-flex justify-content-between align-items-center mb-3 p-2"
+                                style="background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                <div><span class="legend-color" style="background: #00E5FF;"></span>Mobil</div>
+                                <span class="fw-bold text-info fs-5" id="val-mobil">0%</span>
                             </div>
-                            <div class="legend-item d-flex justify-content-between align-items-center mb-2">
-                                <div><span class="legend-color"
-                                        style="background: #FFD600; width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:8px;"></span>Motor
-                                </div>
-                                <span class="fw-bold text-info" id="val-motor">0%</span>
+                            <div class="legend-item d-flex justify-content-between align-items-center mb-3 p-2"
+                                style="background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                <div><span class="legend-color" style="background: #FFD600;"></span>Motor</div>
+                                <span class="fw-bold text-info fs-5" id="val-motor">0%</span>
                             </div>
-                            <div class="legend-item d-flex justify-content-between align-items-center mb-2">
-                                <div><span class="legend-color"
-                                        style="background: #00C853; width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:8px;"></span>Bus
-                                </div>
-                                <span class="fw-bold text-info" id="val-bus">0%</span>
+                            <div class="legend-item d-flex justify-content-between align-items-center mb-3 p-2"
+                                style="background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                <div><span class="legend-color" style="background: #00C853;"></span>Bus</div>
+                                <span class="fw-bold text-info fs-5" id="val-bus">0%</span>
                             </div>
-                            <div class="legend-item d-flex justify-content-between align-items-center mb-2">
-                                <div><span class="legend-color"
-                                        style="background: #FF5252; width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:8px;"></span>Truk
-                                </div>
-                                <span class="fw-bold text-info" id="val-truk">0%</span>
+                            <div class="legend-item d-flex justify-content-between align-items-center mb-3 p-2"
+                                style="background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                <div><span class="legend-color" style="background: #FF5252;"></span>Truk</div>
+                                <span class="fw-bold text-info fs-5" id="val-truk">0%</span>
                             </div>
                         </div>
                     </div>
@@ -510,14 +502,21 @@
                     updateCharts(currentChartId);
                 });
 
-                // --- PENTING: LOGIKA REAL-TIME POLLING (SINKRON DENGAN ADMIN) ---
-                // --- POLLING REALTIME (SINKRON FIREBASE) ---
+                // --- LOGIKA REAL-TIME POLLING (GABUNGAN) ---
+                // Menjalankan semua update (Ringkasan & Grafik) dalam satu waktu setiap 3 detik
                 setInterval(() => {
-                    const selectedCctvId = document.getElementById('chartCctvSelect').value;
-                    // Update Grafik Batang
-                    fetchTrafficChart(selectedCctvId, trafficPeriod);
-                    // Update Grafik Lingkaran
-                    fetchVehicleChart(selectedCctvId, 'harian');
+                    // 1. Update Grafik (Batang & Lingkaran) berdasarkan dropdown statistik
+                    const chartId = document.getElementById('chartCctvSelect').value;
+                    if (chartId !== undefined) {
+                        fetchTrafficChart(chartId, trafficPeriod);
+                        fetchVehicleChart(chartId, 'harian');
+                    }
+
+                    // 2. Update Kartu Ringkasan Atas berdasarkan dropdown video player
+                    const summaryId = document.getElementById('cctvSelect').value;
+                    fetchSummary(summaryId);
+
+                    console.log("Data sinkron dengan Firebase...");
                 }, 3000);
 
                 // Tambahkan Listener pada dropdown grafik
@@ -589,35 +588,106 @@
             // --- CHART GENERATORS ---
 
             function fetchTrafficChart(id, period) {
-                let url = `/api/public/traffic_data?period=${period}&cctv_id=${id}`;
+                if (!id) return; // Jangan panggil jika ID kosong
 
-                fetch(url).then(res => res.json()).then(data => {
-                    const ctx = document.getElementById('trafficChart').getContext('2d');
-                    if (trafficChartInstance) trafficChartInstance.destroy();
+                let url = `/api/public/traffic_data?cctv_id=${id}`;
 
-                    trafficChartInstance = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: data.labels,
-                            datasets: [{
-                                label: 'Kepadatan (%)',
-                                data: data.kepadatan,
-                                backgroundColor: '#00E5FF',
-                                borderRadius: 4,
-                                barThickness: 20
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: { beginAtZero: true, max: 100, grid: { color: '#333' }, ticks: { color: '#888' } },
-                                x: { grid: { display: false }, ticks: { color: '#888' } }
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        const ctx = document.getElementById('trafficChart').getContext('2d');
+                        if (trafficChartInstance) trafficChartInstance.destroy();
+
+                        if (!data.datasets || !data.labels) return;
+
+                        // LOGIKA MULTI-LINE LABELS (Sama dengan Admin)
+                        const multiLineLabels = data.labels.map((label, index) => {
+                            const m = data.datasets.mobil[index] || 0;
+                            const mt = data.datasets.motor[index] || 0;
+                            const b = data.datasets.bus[index] || 0;
+                            const t = data.datasets.truk[index] || 0;
+                            const total = m + mt + b + t;
+
+                            return [
+                                label,
+                                "──────────",
+                                `Mobil : ${m}`,
+                                `Motor : ${mt}`,
+                                `Bus   : ${b}`,
+                                `Truk  : ${t}`,
+                                "──────────",
+                                `Total : ${total}`
+                            ];
+                        });
+
+                        trafficChartInstance = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: multiLineLabels,
+                                datasets: [
+                                    { label: 'Mobil', data: data.datasets.mobil, backgroundColor: '#00E5FF', barThickness: 40 },
+                                    { label: 'Motor', data: data.datasets.motor, backgroundColor: '#FFD600', barThickness: 40 },
+                                    { label: 'Bus', data: data.datasets.bus, backgroundColor: '#00C853', barThickness: 40 },
+                                    { label: 'Truk', data: data.datasets.truk, backgroundColor: '#FF5252', barThickness: 40 }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    x: {
+                                        stacked: true,
+                                        ticks: { color: '#fff', font: { size: 12 }, lineHeight: 1.5, padding: 10 },
+                                        grid: { display: false }
+                                    },
+                                    y: {
+                                        stacked: true,
+                                        beginAtZero: true,
+                                        min: 0,
+                                        ticks: { color: '#888' },
+                                        grid: { color: 'rgba(255,255,255,0.05)' }
+                                    }
+                                },
+                                plugins: {
+                                    legend: { display: true, labels: { color: '#fff' } }
+                                }
                             }
+                        });
+                    })
+                    .catch(err => console.error("Gagal load grafik user:", err));
+            }
+
+            function fetchVehicleChart(id, period) {
+                let url = `/api/public/vehicle_distribution?cctv_id=${id}&period=${period}`;
+
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        const ctx = document.getElementById('vehicleChart').getContext('2d');
+                        if (vehicleChartInstance) vehicleChartInstance.destroy();
+
+                        const hasData = data.data.some(v => v > 0);
+                        vehicleChartInstance = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: data.labels,
+                                datasets: [{
+                                    data: hasData ? data.data : [1],
+                                    backgroundColor: hasData ? ['#00E5FF', '#FFD600', '#00C853', '#FF5252'] : ['#333'],
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
+                        });
+
+                        // Update Legend Persentase
+                        if (data.percentages) {
+                            document.getElementById('val-mobil').innerText = data.percentages[0];
+                            document.getElementById('val-motor').innerText = data.percentages[1];
+                            document.getElementById('val-bus').innerText = data.percentages[2];
+                            document.getElementById('val-truk').innerText = data.percentages[3];
                         }
                     });
-                });
             }
 
             function fetchVehicleChart(id, period) {

@@ -101,13 +101,16 @@ def generate_live_stream(video_url, cctv_id):
     cap = cap_from_youtube(video_url, '360p')
     last_accumulate_time = 0 
     
+    # Tentukan kapasitas maksimal kendaraan yang bisa ditampung jalan di frame tersebut
+    # Anda bisa menyesuaikan angka ini (misal 15 atau 20)
+    KAPASITAS_MAKSIMAL = 15 
+
     while cap.isOpened():
         success, frame = cap.read()
         if not success: break
 
         results = model.predict(frame, classes=VEHICLE_CLASSES, verbose=False, conf=0.25)
         
-        # Hitung deteksi detik ini
         counts_now = {'mobil': 0, 'motor': 0, 'bus': 0, 'truk': 0}
         for r in results:
             for box in r.boxes:
@@ -118,38 +121,54 @@ def generate_live_stream(video_url, cctv_id):
                 elif cls == 7: counts_now['truk'] += 1
         
         total_now = sum(counts_now.values())
-        waktu_sekarang = time.time()
+        waktu_sekarang_unix = time.time()
         now = datetime.now()
         timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
-        date_today = now.strftime("%Y-%m-%d") # Folder Tanggal (2026-01-11)
+        date_today = now.strftime("%Y-%m-%d")
 
-        # --- A. UPDATE LIVE (Tetap untuk Dashboard Real-time) ---
+        # --- LOGIKA PENENTU STATUS BERDASARKAN PERSENTASE ---
+        kepadatan_persen = min(100, int((total_now / KAPASITAS_MAKSIMAL) * 100))
+
+        if kepadatan_persen < 40:
+            status_val = "Lancar"
+        elif kepadatan_persen <= 75:
+            status_val = "Padat"
+        else:
+            status_val = "Macet"
+
+        # --- A. UPDATE LIVE (Dashboard Real-time) ---
         try:
             ref_live = firebase_db.reference(f'traffic_stats/{cctv_id}/live')
             ref_live.update({
                 'total': total_now,
+                'kepadatan_persen': kepadatan_persen, # Simpan angka % ke firebase
                 'detail': counts_now,
-                'last_update': timestamp_str
+                'last_update': timestamp_str,
+                'status': status_val
             })
         except: pass
 
-        # --- B. LOGIKA AKUMULASI HARIAN (AGAR DATA KEMARIN TIDAK HILANG) ---
-        if waktu_sekarang - last_accumulate_time > 5:
+        # --- B. LOGIKA AKUMULASI HARIAN & DURASI ---
+        if waktu_sekarang_unix - last_accumulate_time > 5:
             try:
-                # Kita simpan di folder berdasarkan TANGGAL hari ini
-                # Struktur: traffic_stats/ID/daily_reports/2026-01-11
                 ref_daily = firebase_db.reference(f'traffic_stats/{cctv_id}/daily_reports/{date_today}')
                 daily_data = ref_daily.get()
 
                 if not daily_data:
-                    # Jika hari baru mulai, inisialisasi dengan 0
-                    daily_data = {'total_hari_ini': 0, 'detail': {'mobil':0,'motor':0,'bus':0,'truk':0}}
+                    first_detection = timestamp_str
+                    old_total_daily = 0
+                    old_detail_daily = {'mobil': 0, 'motor': 0, 'bus': 0, 'truk': 0}
+                    duration_str = "0 menit"
+                else:
+                    first_detection = daily_data.get('first_detection', timestamp_str)
+                    old_total_daily = daily_data.get('total_hari_ini', 0)
+                    old_detail_daily = daily_data.get('detail', {'mobil': 0, 'motor': 0, 'bus': 0, 'truk': 0})
+                    
+                    start_dt = datetime.strptime(first_detection, "%Y-%m-%d %H:%M:%S")
+                    diff = now - start_dt
+                    minutes = int(diff.total_seconds() // 60)
+                    duration_str = f"{minutes} menit"
 
-                # Ambil data hari ini yang sudah tersimpan
-                old_total_daily = daily_data.get('total_hari_ini', 0)
-                old_detail_daily = daily_data.get('detail', {'mobil':0,'motor':0,'bus':0,'truk':0})
-
-                # Tambahkan dengan deteksi baru
                 new_total_daily = old_total_daily + total_now
                 new_detail_daily = {
                     'mobil': old_detail_daily.get('mobil', 0) + counts_now['mobil'],
@@ -158,21 +177,26 @@ def generate_live_stream(video_url, cctv_id):
                     'truk': old_detail_daily.get('truk', 0) + counts_now['truk']
                 }
 
-                # Simpan kembali ke folder tanggal hari ini
                 ref_daily.set({
+                    'first_detection': first_detection,
+                    'last_detection': timestamp_str,
+                    'duration_active': duration_str,
                     'total_hari_ini': new_total_daily,
                     'detail': new_detail_daily,
-                    'last_update': timestamp_str
+                    'last_update': timestamp_str,
+                    'status_terakhir': status_val,
+                    'kepadatan_terakhir_persen': kepadatan_persen
                 })
                 
-                # Update total_akumulasi (semua waktu) di live untuk tampilan utama
-                ref_live.update({'total_akumulasi_hari_ini': new_total_daily})
+                ref_live.update({
+                    'total_akumulasi_hari_ini': new_total_daily,
+                    'session_duration': duration_str
+                })
 
-                last_accumulate_time = waktu_sekarang
+                last_accumulate_time = waktu_sekarang_unix
             except Exception as e:
                 print(f"Error Harian: {e}")
 
-        # Streaming Video
         annotated_frame = results[0].plot()
         ret, buffer = cv2.imencode('.jpg', annotated_frame)
         yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
@@ -384,53 +408,63 @@ def logic_get_summary(cctv_id):
 # =========================================================================
 
 def get_firebase_logic_summary(cctv_id):
-    """Mengambil ringkasan data khusus HARI INI agar tidak tercampur dengan kemarin"""
+    """Mengambil ringkasan data HARI INI dengan status berdasarkan persentase (%)"""
     
-    # 1. Dapatkan tanggal hari ini untuk akses folder harian
+    # 1. Dapatkan tanggal hari ini
     today_str = datetime.now().strftime("%Y-%m-%d")
     
     if not cctv_id:
         return {
             "kendaraan_hari_ini": 0, 
-            "kepadatan_tertinggi": "0%", 
-            "rata_rata_kecepatan": "80 km/j", 
+            "kepadatan_tertinggi": 0, 
+            "rata_rata_kecepatan": "80 km/j",
+            "status": "Lancar",
             "kamera_aktif": len(cctv_list)
         }
     
     try:
-        # Ambil data LIVE (untuk deteksi detik ini)
+        # Ambil data LIVE (real-time detik ini)
         ref_live = firebase_db.reference(f'traffic_stats/{cctv_id}/live')
         live_data = ref_live.get()
         
-        # Ambil data DAILY (khusus untuk total akumulasi hari ini)
+        # Ambil data DAILY (akumulasi dari pagi sampai sekarang)
         ref_daily = firebase_db.reference(f'traffic_stats/{cctv_id}/daily_reports/{today_str}')
         daily_data = ref_daily.get()
         
         if live_data:
-            # A. TOTAL KENDARAAN: Ambil dari folder harian (daily_reports)
-            # Jika hari baru mulai dan data belum ada, set ke 0
+            # A. TOTAL KENDARAAN (Akumulasi Hari Ini)
             if daily_data:
                 total_hari_ini = daily_data.get('total_hari_ini', 0)
             else:
                 total_hari_ini = live_data.get('total_akumulasi_hari_ini', 0)
             
-            # B. DETEKSI DETIK INI: Ambil angka 'total' dari live (untuk kepadatan)
+            # B. DETEKSI DETIK INI (Untuk hitung % Kepadatan)
             total_sekarang = live_data.get('total', 0) 
             
-            # C. HITUNG KEPADATAN (Kapasitas 15 agar sensitif)
+            # C. HITUNG KEPADATAN % (Kapasitas 15 kendaraan)
             kapasitas = 15
             kepadatan_int = min(100, int((total_sekarang / kapasitas) * 100))
             
-            # D. HITUNG KECEPATAN (Dinamis)
+            # D. PENENTU STATUS BERDASARKAN PERSENTASE (%)
+            if kepadatan_int < 40:
+                status_txt = "Lancar"
+            elif kepadatan_int <= 75:
+                status_txt = "Padat"
+            else:
+                status_txt = "Macet"
+            
+            # E. HITUNG KECEPATAN (Dinamis berdasarkan kepadatan)
             if total_sekarang == 0:
                 kecepatan_int = 80
             else:
+                # Kecepatan berkurang seiring naiknya kepadatan
                 kecepatan_int = max(10, 80 - int(kepadatan_int * 0.8))
             
             return {
-                "kendaraan_hari_ini": total_hari_ini, # Data murni HARI INI
-                "kepadatan_tertinggi": kepadatan_int, # Kirim angka, JS akan tambah %
+                "kendaraan_hari_ini": total_hari_ini,
+                "kepadatan_tertinggi": kepadatan_int, # Angka saja, JS akan tambah %
                 "rata_rata_kecepatan": f"{kecepatan_int} km/j",
+                "status": status_txt,
                 "kamera_aktif": len(cctv_list)
             }
             
@@ -440,7 +474,8 @@ def get_firebase_logic_summary(cctv_id):
     return {
         "kendaraan_hari_ini": 0, 
         "kepadatan_tertinggi": 0, 
-        "rata_rata_kecepatan": "80 km/j", 
+        "rata_rata_kecepatan": "80 km/j",
+        "status": "Lancar",
         "kamera_aktif": len(cctv_list)
     }
 
@@ -525,7 +560,46 @@ def api_public_dashboard_summary():
 
 @app.route('/api/public/traffic_data')
 def api_public_traffic_data():
-    return jsonify(get_firebase_logic_history(request.args.get('cctv_id'), request.args.get('period')))
+    cctv_id = request.args.get('cctv_id')
+    # Jika cctv_id kosong, bisa di-default ke salah satu ID, misal '5' atau ditangani khusus
+    if not cctv_id:
+        return jsonify({"labels": [], "datasets": {}})
+
+    try:
+        ref = firebase_db.reference(f'traffic_stats/{cctv_id}/daily_reports')
+        # Ambil 7 hari terakhir
+        daily_data = ref.order_by_key().limit_to_last(7).get()
+        
+        labels = []
+        data_mobil, data_motor, data_bus, data_truk = [], [], [], []
+
+        if daily_data:
+            for date_key in sorted(daily_data.keys()):
+                val = daily_data[date_key]
+                detail = val.get('detail', {})
+                
+                # Format label tanggal (13 Jan)
+                date_obj = datetime.strptime(date_key, "%Y-%m-%d")
+                labels.append(date_obj.strftime("%d %b"))
+                
+                # Masukkan data kendaraan
+                data_mobil.append(detail.get('mobil', 0))
+                data_motor.append(detail.get('motor', 0))
+                data_bus.append(detail.get('bus', 0))
+                data_truk.append(detail.get('truk', 0))
+
+        return jsonify({
+            "labels": labels,
+            "datasets": {
+                "mobil": data_mobil,
+                "motor": data_motor,
+                "bus": data_bus,
+                "truk": data_truk
+            }
+        })
+    except Exception as e:
+        print(f"Error Public Traffic API: {e}")
+        return jsonify({"labels": [], "datasets": {}})
 
 @app.route('/api/public/analytics_data')
 def api_public_analytics_data():
@@ -596,42 +670,69 @@ def api_admin_vehicle_distribution():
 @api_login_required
 def api_admin_traffic_data():
     cctv_id = request.args.get('cctv_id')
-    period = request.args.get('period', 'harian')
-    today_str = datetime.now().strftime("%Y-%m-%d") # Filter tanggal hari ini
-
     try:
-        ref = firebase_db.reference(f'traffic_stats/{cctv_id}/history')
-        # Ambil data yang cukup banyak untuk difilter
-        history_data = ref.order_by_key().limit_to_last(100).get()
+        ref = firebase_db.reference(f'traffic_stats/{cctv_id}/daily_reports')
+        # Ambil 7 hari terakhir
+        daily_data = ref.order_by_key().limit_to_last(7).get()
         
         labels = []
-        kepadatan = []
+        data_mobil = []
+        data_motor = []
+        data_bus = []
+        data_truk = []
 
-        if history_data:
-            for key in sorted(history_data.keys()):
-                val = history_data[key]
-                last_update = val.get('last_update', '')
+        if daily_data:
+            for date_key in sorted(daily_data.keys()):
+                val = daily_data[date_key]
+                detail = val.get('detail', {})
+                
+                # Format Label Tanggal
+                date_obj = datetime.strptime(date_key, "%Y-%m-%d")
+                labels.append(date_obj.strftime("%d %b"))
+                
+                # Ambil rincian kendaraan (Default 0 jika data belum ada)
+                data_mobil.append(detail.get('mobil', 0))
+                data_motor.append(detail.get('motor', 0))
+                data_bus.append(detail.get('bus', 0))
+                data_truk.append(detail.get('truk', 0))
 
-                # FILTER: Hanya ambil data jika tanggalnya sama dengan HARI INI
-                if last_update.startswith(today_str):
-                    # Ambil Jam:Menit (10:22)
-                    labels.append(last_update[11:16])
-                    # Hitung kepadatan (asumsi 20 kendaraan = 100%)
-                    total = val.get('total', 0)
-                    kepadatan.append(min(100, int((total / 20) * 100)))
-
-        # Jika data hari ini masih sedikit, tampilkan apa adanya
         return jsonify({
-            "labels": labels[-15:], # Tampilkan 15 data terakhir hari ini
-            "kepadatan": kepadatan[-15:]
+            "labels": labels,
+            "datasets": {
+                "mobil": data_mobil,
+                "motor": data_motor,
+                "bus": data_bus,
+                "truk": data_truk
+            }
         })
     except Exception as e:
-        print(f"Error Chart Batang: {e}")
-        return jsonify({"labels": [], "kepadatan": []})
+        print(f"Error Chart Detail: {e}")
+        return jsonify({"labels": [], "datasets": {}})
 
 @app.route('/api/cctv_locations')
-def get_cctv_locations():
-    return jsonify(cctv_list), 200
+def api_cctv_locations():
+    # 1. Ambil list CCTV dasar
+    cameras = fetch_cctv_list()
+    
+    try:
+        # 2. Ambil semua status dari Firebase sekaligus
+        traffic_ref = firebase_db.reference('traffic_stats').get()
+        
+        # 3. Gabungkan status ke dalam list camera
+        for cam in cameras:
+            cam_id = str(cam['id'])
+            if traffic_ref and cam_id in traffic_ref:
+                # Ambil status dari node live
+                cam['traffic_status'] = traffic_ref[cam_id].get('live', {}).get('status', 'Lancar')
+                cam['current_total'] = traffic_ref[cam_id].get('live', {}).get('total', 0)
+            else:
+                cam['traffic_status'] = 'Lancar' # Default jika belum ada deteksi
+                cam['current_total'] = 0
+
+        return jsonify(cameras), 200
+    except Exception as e:
+        print(f"Error Map Sync: {e}")
+        return jsonify(cameras), 200
 
 # =========================================================================
 # --- ROUTE API (PUBLIC DASHBOARD) ---
