@@ -710,6 +710,36 @@
             </div>
         </div>
 
+        <!-- ANALITIK KOMENTAR ADMIN -->
+        <div class="row mb-5 g-4">
+            <!-- KIRI: GRAFIK -->
+            <div class="col-lg-6">
+                <div class="dashboard-card h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="mb-0">Tren Laporan Masuk</h4>
+                        <i data-lucide="trending-up" class="text-warning"></i>
+                    </div>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="commentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KANAN: LIST DATA -->
+            <div class="col-lg-6">
+                <div class="dashboard-card h-100" style="display: flex; flex-direction: column;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="mb-0">Daftar Komentar Terbaru</h4>
+                        <span class="badge bg-info text-dark" id="commentCount">0 Laporan</span>
+                    </div>
+
+                    <div id="commentList" style="flex: 1; overflow-y: auto; max-height: 400px; padding-right: 10px;">
+                        <!-- Komentar di-render di sini -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- BAGIAN 4: MANAJEMEN KAMERA & STATUS SISTEM -->
         <div class="row mb-5 g-4 equal-height">
             <!-- KOLOM KIRI -->
@@ -814,7 +844,83 @@
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-            lucide.createIcons();
+
+            // --- BAGIAN ANALITIK KOMENTAR ADMIN (SINKRON FIREBASE) ---
+            let commentChartInstance = null;
+
+            function refreshCommentsAdmin() {
+                fetch('/api/admin/comments_analytics')
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log("Data Komentar:", data); // Cek di F12 console
+
+                        // 1. UPDATE GRAFIK (DUA GARIS)
+                        const ctx = document.getElementById('commentChart');
+                        if (ctx) {
+                            if (commentChartInstance) commentChartInstance.destroy();
+                            commentChartInstance = new Chart(ctx.getContext('2d'), {
+                                type: 'line',
+                                data: {
+                                    labels: data.labels,
+                                    datasets: [
+                                        {
+                                            label: 'Puas (Baik)',
+                                            data: data.baik,
+                                            borderColor: '#00E5FF',
+                                            backgroundColor: 'rgba(0, 229, 255, 0.1)',
+                                            fill: true, tension: 0.4
+                                        },
+                                        {
+                                            label: 'Laporan (Buruk)',
+                                            data: data.buruk,
+                                            borderColor: '#FF5252',
+                                            backgroundColor: 'rgba(255, 82, 82, 0.1)',
+                                            fill: true, tension: 0.4
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true, maintainAspectRatio: false,
+                                    scales: {
+                                        y: { beginAtZero: true, ticks: { stepSize: 1, color: '#888' }, grid: { color: '#333' } },
+                                        x: { ticks: { color: '#888' }, grid: { display: false } }
+                                    }
+                                }
+                            });
+                        }
+
+                        // 2. UPDATE LIST KOMENTAR
+                        const listContainer = document.getElementById('commentList');
+                        const countBadge = document.getElementById('commentCount');
+
+                        if (countBadge) countBadge.innerText = `${data.list.length} Laporan Masyarakat`;
+
+                        let html = '';
+                        data.list.forEach(c => {
+                            const isBaik = c.sentimen === "Baik";
+                            const color = isBaik ? "#00E5FF" : "#FF5252";
+
+                            html += `
+                <div class="mb-3 p-3" style="background: rgba(255,255,255,0.03); border-left: 4px solid ${color}; border-radius: 8px;">
+                    <div class="d-flex justify-content-between mb-1">
+                        <h6 style="color: ${color}; font-weight: bold; margin:0;">${c.nama} 
+                            <small style="color:#666; font-size:10px; margin-left:5px;">(${c.sentimen})</small>
+                        </h6>
+                        <small style="color:#777; font-size:11px;">${c.hari}, ${c.tanggal}</small>
+                    </div>
+                    <p style="color:#eee; font-size:13px; margin: 5px 0;">${c.komentar}</p>
+                    <div style="text-align:right; font-size:10px; color:#555;">${c.jam}</div>
+                </div>`;
+                        });
+                        if (listContainer) listContainer.innerHTML = html || '<p class="text-center text-muted">Belum ada data.</p>';
+                        lucide.createIcons();
+                    })
+                    .catch(err => console.error("Error Fetch Admin:", err));
+            }
+
+            // Polling setiap 5 detik agar real-time
+            setInterval(refreshCommentsAdmin, 5000);
+            refreshCommentsAdmin();
 
             // --- GLOBAL VARS ---
             let currentFeedId = null;

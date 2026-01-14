@@ -259,6 +259,44 @@
             border-top: 1px solid #333;
             margin-top: 50px;
         }
+
+        /* Perbaikan Floating Label untuk Tema Gelap */
+        .form-floating>label {
+            color: var(--text-muted) !important;
+            background-color: transparent !important;
+            /* Hilangkan kotak putih */
+            padding: 1rem 0.75rem;
+        }
+
+        .form-floating>.form-control {
+            background-color: #1a1a1a !important;
+            color: white !important;
+            border: 1px solid #444 !important;
+            height: calc(3.5rem + 2px);
+            /* Standar tinggi floating label */
+        }
+
+        /* Warna label saat input aktif atau berisi teks */
+        .form-floating>.form-control:focus~label,
+        .form-floating>.form-control:not(:placeholder-shown)~label {
+            transform: scale(.85) translateY(-1rem) translateX(.15rem);
+            color: var(--accent-cyan) !important;
+            opacity: 1;
+        }
+
+        /* Tombol Kirim */
+        .btn-kirim {
+            background-color: var(--accent-cyan) !important;
+            color: black !important;
+            font-weight: 700 !important;
+            border: none;
+            transition: 0.3s;
+        }
+
+        .btn-kirim:hover {
+            transform: scale(1.05);
+            background-color: #00B8D4 !important;
+        }
     </style>
 </head>
 
@@ -438,6 +476,48 @@
                 </div>
             </div>
         </div>
+
+        <!-- KOLOM KOMENTAR USER -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="dashboard-card border-0"
+                    style="background-color: #1e1e1e; border-radius: 16px; padding: 25px;">
+                    <div class="d-flex align-items-center mb-4">
+                        <i data-lucide="message-square" class="text-info me-2"></i>
+                        <h4 class="mb-0 fw-bold text-white">Kirim Laporan / Komentar Warga</h4>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- Input Nama -->
+                        <div class="col-md-4">
+                            <div class="form-floating">
+                                <input type="text" id="comm_nama"
+                                    class="form-control bg-dark text-white border-secondary" placeholder="Nama Lengkap">
+                                <label class="text-muted">Nama Lengkap</label>
+                            </div>
+                        </div>
+
+                        <!-- Input Pesan -->
+                        <div class="col-md-8">
+                            <div class="input-group" style="height: 58px;">
+                                <div class="form-floating flex-grow-1">
+                                    <input type="text" id="comm_pesan"
+                                        class="form-control bg-dark text-white border-secondary"
+                                        style="border-radius: 10px 0 0 10px !important;" placeholder="Komentar">
+                                    <label class="text-muted">Tulis laporan atau saran anda...</label>
+                                </div>
+                                <!-- Pastikan ada onclick="sendComment()" -->
+                                <button class="btn btn-info text-dark fw-bold px-4" type="button" id="btnKirim"
+                                    onclick="sendComment()" style="border-radius: 0 10px 10px 0 !important;">
+                                    <i data-lucide="send" size="18" class="me-1"></i> Kirim
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </script>
 
         <!-- Footer -->
         <footer class="text-center">
@@ -734,6 +814,51 @@
                             document.getElementById('val-bus').innerText = data.percentages[2];
                             document.getElementById('val-truk').innerText = data.percentages[3];
                         }
+                    });
+            }
+
+            function sendComment() {
+                const namaInput = document.getElementById('comm_nama');
+                const pesanInput = document.getElementById('comm_pesan');
+                const btn = document.getElementById('btnKirim');
+
+                const nama = namaInput.value.trim() || "Anonim";
+                const pesan = pesanInput.value.trim();
+
+                if (!pesan) {
+                    alert("Silakan isi laporan Anda terlebih dahulu!");
+                    return;
+                }
+
+                // Efek loading
+                btn.disabled = true;
+                btn.innerText = "Mengirim...";
+
+                fetch('/api/submit_comment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nama: nama,
+                        komentar: pesan
+                    })
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === "success") {
+                            alert("Laporan berhasil dikirim ke Admin!");
+                            pesanInput.value = ""; // Kosongkan pesan
+                        } else {
+                            alert("Gagal: " + data.message);
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert("Terjadi kesalahan koneksi.");
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i data-lucide="send" size="18" class="me-1"></i> Kirim';
+                        lucide.createIcons();
                     });
             }
         </script>

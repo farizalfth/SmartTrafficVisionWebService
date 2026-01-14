@@ -20,6 +20,8 @@ import calendar
 import firebase_admin
 from firebase_admin import credentials, db as firebase_db
 
+from collections import Counter
+
 # Simpan waktu kapan server dinyalakan
 SERVER_START_TIME = time.time()
 
@@ -1012,6 +1014,79 @@ def admin_dashboard():
     except Exception as e:
         print(f"Error pada Admin Dashboard: {e}")
         return "Terjadi kesalahan pada database. Pastikan MySQL aktif.", 500
+    
+# 1. Dictionary Translate Hari
+HARI_INDO = {
+    'Monday': 'Senin', 'Tuesday': 'Selasa', 'Wednesday': 'Rabu',
+    'Thursday': 'Kamis', 'Friday': 'Jumat', 'Saturday': 'Sabtu', 'Sunday': 'Minggu'
+}
+
+# --- DAFTAR KATA KUNCI SENTIMEN ---
+KATA_POSITIF = ['baik', 'bagus', 'membantu', 'terimakasih', 'terima kasih', 'keren', 'mantap', 'lancar', 'puas']
+KATA_NEGATIF = ['buruk', 'jelek', 'macet', 'parah', 'lambat', 'tidak membantu', 'kecewa', 'kurang', 'salah']
+
+def klasifikasi_sentimen(teks):
+    teks = teks.lower()
+    skor_positif = sum(1 for kata in KATA_POSITIF if kata in teks)
+    skor_negatif = sum(1 for kata in KATA_NEGATIF if kata in teks)
+    return "Buruk" if skor_negatif > skor_positif else "Baik"
+
+# --- API USER: Kirim Komentar ---
+@app.route('/api/submit_comment', methods=['POST'])
+def submit_comment():
+    try:
+        data = request.get_json()
+        pesan = data.get('komentar', '')
+        nama = data.get('nama', 'Anonim')
+        
+        sentimen = klasifikasi_sentimen(pesan)
+        now = datetime.now()
+        day_eng = now.strftime("%A")
+        
+        payload = {
+            "nama": nama,
+            "komentar": pesan,
+            "sentimen": sentimen,
+            "tanggal": now.strftime("%Y-%m-%d"),
+            "jam": now.strftime("%H:%M:%S"),
+            "hari": HARI_INDO.get(day_eng, day_eng),
+            "timestamp": time.time()
+        }
+        firebase_db.reference('user_comments').push(payload)
+        return jsonify({"status": "success", "message": "Laporan terkirim!"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# --- API ADMIN: Statistik Komentar ---
+@app.route('/api/admin/comments_analytics')
+@api_login_required
+def admin_comments_analytics():
+    try:
+        ref = firebase_db.reference('user_comments').get()
+        if not ref:
+            return jsonify({"labels": [], "baik": [], "buruk": [], "list": []})
+        
+        comments = list(ref.values())
+        # Kelompokkan data per tanggal
+        data_per_tgl = {}
+        for c in comments:
+            tgl = c['tanggal']
+            sen = c.get('sentimen', 'Baik') # Default Baik jika data lama tidak punya sentimen
+            if tgl not in data_per_tgl:
+                data_per_tgl[tgl] = {"Baik": 0, "Buruk": 0}
+            data_per_tgl[tgl][sen] += 1
+            
+        sorted_dates = sorted(data_per_tgl.keys())
+        
+        return jsonify({
+            "labels": sorted_dates,
+            "baik": [data_per_tgl[d]["Baik"] for d in sorted_dates],
+            "buruk": [data_per_tgl[d]["Buruk"] for d in sorted_dates],
+            "list": sorted(comments, key=lambda x: x.get('timestamp', 0), reverse=True)[:10]
+        })
+    except Exception as e:
+        print(f"API Error: {e}")
+        return jsonify({"error": str(e)}), 500
     
 if __name__ == '__main__':
     detector_thread = threading.Thread(
