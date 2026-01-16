@@ -852,54 +852,89 @@
                 fetch('/api/admin/comments_analytics')
                     .then(res => res.json())
                     .then(data => {
-                        console.log("Data Komentar:", data); // Cek di F12 console
-
-                        // 1. UPDATE GRAFIK (DUA GARIS)
                         const ctx = document.getElementById('commentChart');
-                        if (ctx) {
-                            if (commentChartInstance) commentChartInstance.destroy();
-                            commentChartInstance = new Chart(ctx.getContext('2d'), {
-                                type: 'line',
-                                data: {
-                                    labels: data.labels,
-                                    datasets: [
-                                        {
-                                            label: 'Puas (Baik)',
-                                            data: data.baik,
-                                            borderColor: '#00E5FF',
-                                            backgroundColor: 'rgba(0, 229, 255, 0.1)',
-                                            fill: true, tension: 0.4
+                        if (!ctx) return;
+
+                        if (commentChartInstance) commentChartInstance.destroy();
+
+                        // --- MODIFIKASI LABEL: Menambahkan Total Keseluruhan ---
+                        const multiLineLabels = data.labels.map((label, index) => {
+                            const b = data.baik[index] || 0;   // Jumlah Baik
+                            const br = data.buruk[index] || 0; // Jumlah Buruk
+                            const total = b + br;              // Total (Baik + Buruk)
+
+                            return [
+                                label,              // Baris 1: Tanggal (2026-01-14)
+                                "──────────",        // Baris 2: Garis pembatas
+                                `Baik  : ${b}`,     // Baris 3
+                                `Buruk : ${br}`,    // Baris 4
+                                `Total : ${total}`   // Baris 5: TOTAL KESELURUHAN
+                            ];
+                        });
+
+                        commentChartInstance = new Chart(ctx.getContext('2d'), {
+                            type: 'bar',
+                            data: {
+                                labels: multiLineLabels, // Gunakan label baru
+                                datasets: [
+                                    {
+                                        label: 'Puas (Baik)',
+                                        data: data.baik,
+                                        backgroundColor: '#00E5FF',
+                                        borderRadius: 5,
+                                        barPercentage: 0.6,
+                                        categoryPercentage: 0.5
+                                    },
+                                    {
+                                        label: 'Laporan (Buruk)',
+                                        data: data.buruk,
+                                        backgroundColor: '#FF5252',
+                                        borderRadius: 5,
+                                        barPercentage: 0.6,
+                                        categoryPercentage: 0.5
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: { stepSize: 1, color: '#888' },
+                                        grid: { color: 'rgba(255,255,255,0.05)' }
+                                    },
+                                    x: {
+                                        ticks: {
+                                            color: '#ffffff', // Warna teks putih agar jelas
+                                            font: {
+                                                size: 11,
+                                                family: "'Poppins', sans-serif",
+                                                lineHeight: 1.5
+                                            },
+                                            padding: 10
                                         },
-                                        {
-                                            label: 'Laporan (Buruk)',
-                                            data: data.buruk,
-                                            borderColor: '#FF5252',
-                                            backgroundColor: 'rgba(255, 82, 82, 0.1)',
-                                            fill: true, tension: 0.4
-                                        }
-                                    ]
+                                        grid: { display: false }
+                                    }
                                 },
-                                options: {
-                                    responsive: true, maintainAspectRatio: false,
-                                    scales: {
-                                        y: { beginAtZero: true, ticks: { stepSize: 1, color: '#888' }, grid: { color: '#333' } },
-                                        x: { ticks: { color: '#888' }, grid: { display: false } }
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: 'top',
+                                        labels: { color: '#888', font: { size: 10 } }
                                     }
                                 }
-                            });
-                        }
+                            }
+                        });
 
-                        // 2. UPDATE LIST KOMENTAR
+                        // --- Update List Komentar (tetap sama) ---
                         const listContainer = document.getElementById('commentList');
                         const countBadge = document.getElementById('commentCount');
-
                         if (countBadge) countBadge.innerText = `${data.list.length} Laporan Masyarakat`;
 
                         let html = '';
                         data.list.forEach(c => {
-                            const isBaik = c.sentimen === "Baik";
-                            const color = isBaik ? "#00E5FF" : "#FF5252";
-
+                            const color = c.sentimen === "Baik" ? "#00E5FF" : "#FF5252";
                             html += `
                 <div class="mb-3 p-3" style="background: rgba(255,255,255,0.03); border-left: 4px solid ${color}; border-radius: 8px;">
                     <div class="d-flex justify-content-between mb-1">
@@ -914,8 +949,7 @@
                         });
                         if (listContainer) listContainer.innerHTML = html || '<p class="text-center text-muted">Belum ada data.</p>';
                         lucide.createIcons();
-                    })
-                    .catch(err => console.error("Error Fetch Admin:", err));
+                    });
             }
 
             // Polling setiap 5 detik agar real-time

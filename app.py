@@ -56,9 +56,9 @@ VEHICLE_CLASSES = [2, 3, 5, 7]
 # Data CCTV Manual (Karena tabel CCTV belum ada di MySQL)
 # URL ini akan digunakan oleh generator
 cctv_list = [
-    {'id': '1', 'name': 'CCTV Pontianak (Simpang Garuda)', 'url': 'https://www.youtube.com/watch?v=1s9cRcqZf58'},
-    {'id': '2', 'name': 'CTV Pontianak (Tugu Khatulistiwa)', 'url': 'https://www.youtube.com/watch?v=oqSqC-gOALo'},
-    {'id': '3', 'name': 'CTV Demak (Alun-Alun)', 'url': 'https://www.youtube.com/watch?v=mHk5UKckU7M'},
+    {'id': '1', 'name': 'CCTV Pontianak (Simpang Garuda)', 'url': 'https://www.youtube.com/watch?v=_xzKYnk6zSE'},
+    {'id': '2', 'name': 'CTV Pontianak (Tugu Khatulistiwa)', 'url': 'https://www.youtube.com/watch?v=BEw38LHC5x4'},
+    {'id': '3', 'name': 'CTV Demak (Alun-Alun)', 'url': 'https://www.youtube.com/watch?v=zf8RYyF6BoI'},
     {'id': '4', 'name': 'CCTV Demak (Pasar Bintoro)', 'url': 'https://www.youtube.com/watch?v=7c4CsGkmBu8'},
     {'id': '5', 'name': 'CCTV Demak (Pertigaan Trengguli)', 'url': 'https://www.youtube.com/watch?v=5nw3G2jtWaU'}
 ]
@@ -212,22 +212,28 @@ def generate_live_stream(video_url, cctv_id):
 def fetch_cctv_list():
     return [
         { 
-            "id": 1, "name": "CCTV Pontianak (Simpang Garuda)", "status": "Aktif", 
-            "lat": -0.0245, "lon": 109.3406,
-            "stream_url": "https://www.youtube.com/embed/1s9cRcqZf58", 
-            "youtube_link": "https://www.youtube.com/watch?v=1s9cRcqZf58" 
+            "id": 1, 
+            "name": "CCTV Pontianak (Simpang Garuda)", 
+            "status": "Aktif", 
+            "lat": -0.023851, "lon": 109.333423,
+            "stream_url": "https://www.youtube.com/embed/_xzKYnk6zSE", 
+            "youtube_link": "https://www.youtube.com/watch?v=_xzKYnk6zSE" 
         },
         { 
-            "id": 2, "name": "CCTV Pontianak (Tugu Khatulistiwa)", "status": "Aktif",
-            "lat": 0.0000, "lon": 109.3300,
-            "stream_url": "https://www.youtube.com/embed/oqSqC-gOALo", 
-            "youtube_link": "https://www.youtube.com/watch?v=oqSqC-gOALo" 
+            "id": 2, 
+            "name": "CCTV Pontianak (Tugu Khatulistiwa)", 
+            "status": "Aktif",
+            "lat": 0.000000, "lon": 109.321100,
+            "stream_url": "https://www.youtube.com/embed/BEw38LHC5x4", 
+            "youtube_link": "https://www.youtube.com/watch?v=BEw38LHC5x4" 
         },
         { 
-            "id": 3, "name": "CCTV Demak (Alun-Alun)", "status": "Aktif",
-            "lat": -6.8906, "lon": 110.6385,
-            "stream_url": "https://www.youtube.com/embed/mHk5UKckU7M", 
-            "youtube_link": "https://www.youtube.com/watch?v=mHk5UKckU7M" 
+            "id": 3, 
+            "name": "CCTV Demak (Alun-Alun)", 
+            "status": "Aktif",
+            "lat": -6.894621, "lon": 110.636922,
+            "stream_url": "https://www.youtube.com/embed/zf8RYyF6BoI", 
+            "youtube_link": "https://www.youtube.com/watch?v=zf8RYyF6BoI" 
         },
         { 
             "id": 4, "name": "CCTV Demak (Pasar Bintoro)", "status": "Aktif",
@@ -1021,15 +1027,61 @@ HARI_INDO = {
     'Thursday': 'Kamis', 'Friday': 'Jumat', 'Saturday': 'Sabtu', 'Sunday': 'Minggu'
 }
 
-# --- DAFTAR KATA KUNCI SENTIMEN ---
-KATA_POSITIF = ['baik', 'bagus', 'membantu', 'terimakasih', 'terima kasih', 'keren', 'mantap', 'lancar', 'puas']
-KATA_NEGATIF = ['buruk', 'jelek', 'macet', 'parah', 'lambat', 'tidak membantu', 'kecewa', 'kurang', 'salah']
+# --- DAFTAR KATA KUNCI SENTIMEN YANG DIPERLUAS ---
+KATA_POSITIF = [
+    'baik', 'bagus', 'mantap', 'keren', 'membantu', 'lancar', 'puas', 'terima kasih', 
+    'terimakasih', 'hebat', 'luar biasa', 'bermanfaat', 'akurat', 'informatif', 
+    'canggih', 'oke', 'ok', 'sip', 'jos', 'top', 'solusi', 'cepat', 'responsif', 
+    'membantu', 'terbantu', 'senang', 'keren', 'update'
+]
+
+KATA_NEGATIF = [
+    'buruk', 'jelek', 'macet', 'parah', 'lambat', 'kecewa', 'salah', 'error', 
+    'rusak', 'lemot', 'payah', 'ribet', 'sulit', 'susah', 'lag', 'gagal', 
+    'tidak membantu', 'tidak berguna', 'kurang', 'kacau', 'berantakan', 
+    'penipu', 'bohong', 'sampah', 'patah', 'tidak akurat', 'bukan solusi', 
+    'mati', 'down', 'bug', 'jelek', 'parah banget'
+]
 
 def klasifikasi_sentimen(teks):
     teks = teks.lower()
-    skor_positif = sum(1 for kata in KATA_POSITIF if kata in teks)
-    skor_negatif = sum(1 for kata in KATA_NEGATIF if kata in teks)
-    return "Buruk" if skor_negatif > skor_positif else "Baik"
+    
+    # 1. Cek frase negatif yang mengandung kata positif (Negation Handling)
+    # Agar "tidak membantu" tidak terbaca "Baik" hanya karena ada kata "membantu"
+    frase_negatif = ['tidak', 'kurang', 'bukan', 'ga ', 'gak', 'jangan']
+    
+    skor_positif = 0
+    skor_negatif = 0
+    
+    # Cek kata negatif langsung
+    for kata in KATA_NEGATIF:
+        if kata in teks:
+            skor_negatif += 1
+            
+    # Cek kata positif
+    for kata in KATA_POSITIF:
+        if kata in teks:
+            # Jika ada kata negasi sebelum kata positif (contoh: "tidak bagus")
+            # maka dianggap negatif
+            terdeteksi_negasi = False
+            for neg in frase_negatif:
+                if f"{neg} {kata}" in teks or f"{neg}{kata}" in teks:
+                    terdeteksi_negasi = True
+                    break
+            
+            if terdeteksi_negasi:
+                skor_negatif += 1.5 # Bobot lebih besar karena ini penolakan
+            else:
+                skor_positif += 1
+
+    # Penentuan Akhir
+    if skor_negatif > skor_positif:
+        return "Buruk"
+    elif skor_positif > skor_negatif:
+        return "Baik"
+    else:
+        # Jika skor sama, cek apakah ada lebih banyak kata negatif secara umum
+        return "Buruk" if skor_negatif > 0 else "Baik"
 
 # --- API USER: Kirim Komentar ---
 @app.route('/api/submit_comment', methods=['POST'])
