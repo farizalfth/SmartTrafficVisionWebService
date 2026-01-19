@@ -857,10 +857,14 @@
 
                         if (commentChartInstance) commentChartInstance.destroy();
 
-                        // --- MODIFIKASI LABEL: Menambahkan Total Keseluruhan ---
-                        const multiLineLabels = data.labels.map((label, index) => {
-                            const b = data.baik[index] || 0;   // Jumlah Baik
-                            const br = data.buruk[index] || 0; // Jumlah Buruk
+                        // --- MODIFIKASI LABEL: Menambahkan Total Keseluruhan & Pengaman Data ---
+                        const labels = data.labels || [];
+                        const baikData = data.baik || [];
+                        const burukData = data.buruk || [];
+
+                        const multiLineLabels = labels.map((label, index) => {
+                            const b = baikData[index] || 0;   // Jumlah Baik
+                            const br = burukData[index] || 0; // Jumlah Buruk
                             const total = b + br;              // Total (Baik + Buruk)
 
                             return [
@@ -875,11 +879,11 @@
                         commentChartInstance = new Chart(ctx.getContext('2d'), {
                             type: 'bar',
                             data: {
-                                labels: multiLineLabels, // Gunakan label baru
+                                labels: multiLineLabels,
                                 datasets: [
                                     {
                                         label: 'Puas (Baik)',
-                                        data: data.baik,
+                                        data: baikData,
                                         backgroundColor: '#00E5FF',
                                         borderRadius: 5,
                                         barPercentage: 0.6,
@@ -887,7 +891,7 @@
                                     },
                                     {
                                         label: 'Laporan (Buruk)',
-                                        data: data.buruk,
+                                        data: burukData,
                                         backgroundColor: '#FF5252',
                                         borderRadius: 5,
                                         barPercentage: 0.6,
@@ -906,7 +910,7 @@
                                     },
                                     x: {
                                         ticks: {
-                                            color: '#ffffff', // Warna teks putih agar jelas
+                                            color: '#ffffff',
                                             font: {
                                                 size: 11,
                                                 family: "'Poppins', sans-serif",
@@ -927,29 +931,38 @@
                             }
                         });
 
-                        // --- Update List Komentar (tetap sama) ---
+                        // --- Update List Komentar (SINKRON WEB & FLUTTER) ---
                         const listContainer = document.getElementById('commentList');
                         const countBadge = document.getElementById('commentCount');
-                        if (countBadge) countBadge.innerText = `${data.list.length} Laporan Masyarakat`;
+                        const comments = data.list || [];
+
+                        if (countBadge) countBadge.innerText = `${comments.length} Laporan Masyarakat`;
 
                         let html = '';
-                        data.list.forEach(c => {
-                            const color = c.sentimen === "Baik" ? "#00E5FF" : "#FF5252";
+                        comments.forEach(c => {
+                            // Handle sentimen agar tidak case sensitive (Baik vs baik)
+                            const sentimen = (c.sentimen || 'Baik').toLowerCase();
+                            const color = sentimen === "baik" ? "#00E5FF" : "#FF5252";
+
                             html += `
                 <div class="mb-3 p-3" style="background: rgba(255,255,255,0.03); border-left: 4px solid ${color}; border-radius: 8px;">
                     <div class="d-flex justify-content-between mb-1">
-                        <h6 style="color: ${color}; font-weight: bold; margin:0;">${c.nama} 
-                            <small style="color:#666; font-size:10px; margin-left:5px;">(${c.sentimen})</small>
+                        <h6 style="color: ${color}; font-weight: bold; margin:0;">${c.nama || 'Anonim'} 
+                            <small style="color:#666; font-size:10px; margin-left:5px;">(${c.sentimen || 'Baik'})</small>
                         </h6>
-                        <small style="color:#777; font-size:11px;">${c.hari}, ${c.tanggal}</small>
+                        <small style="color:#777; font-size:11px;">${c.hari || ''}, ${c.tanggal || ''}</small>
                     </div>
-                    <p style="color:#eee; font-size:13px; margin: 5px 0;">${c.komentar}</p>
-                    <div style="text-align:right; font-size:10px; color:#555;">${c.jam}</div>
+                    <p style="color:#eee; font-size:13px; margin: 5px 0;">${c.komentar || c.pesan || ''}</p>
+                    <div style="text-align:right; font-size:10px; color:#555;">${c.jam || ''}</div>
                 </div>`;
                         });
-                        if (listContainer) listContainer.innerHTML = html || '<p class="text-center text-muted">Belum ada data.</p>';
+
+                        if (listContainer) {
+                            listContainer.innerHTML = html || '<p class="text-center text-muted">Belum ada data laporan.</p>';
+                        }
                         lucide.createIcons();
-                    });
+                    })
+                    .catch(err => console.error("Gagal sinkron laporan admin:", err));
             }
 
             // Polling setiap 5 detik agar real-time

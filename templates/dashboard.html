@@ -832,45 +832,26 @@
             function sendComment() {
                 const namaInput = document.getElementById('comm_nama');
                 const pesanInput = document.getElementById('comm_pesan');
-                const btn = document.getElementById('btnKirim');
 
-                const nama = namaInput.value.trim() || "Anonim";
+                const nama = namaInput.value.trim() || "Warga Anonim";
                 const pesan = pesanInput.value.trim();
 
-                if (!pesan) {
-                    alert("Silakan isi laporan Anda terlebih dahulu!");
-                    return;
-                }
-
-                // Efek loading
-                btn.disabled = true;
-                btn.innerText = "Mengirim...";
+                if (!pesan) return alert("Isi pesan dulu!");
 
                 fetch('/api/submit_comment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         nama: nama,
-                        komentar: pesan
+                        komentar: pesan // Backend Anda menggunakan key 'komentar'
                     })
                 })
                     .then(res => res.json())
                     .then(data => {
                         if (data.status === "success") {
-                            alert("Laporan berhasil dikirim ke Admin!");
-                            pesanInput.value = ""; // Kosongkan pesan
-                        } else {
-                            alert("Gagal: " + data.message);
+                            pesanInput.value = "";
+                            alert("Laporan terkirim ke Firebase & Admin!");
                         }
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        alert("Terjadi kesalahan koneksi.");
-                    })
-                    .finally(() => {
-                        btn.disabled = false;
-                        btn.innerHTML = '<i data-lucide="send" size="18" class="me-1"></i> Kirim';
-                        lucide.createIcons();
                     });
             }
 

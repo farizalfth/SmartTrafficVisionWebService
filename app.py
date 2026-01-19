@@ -1186,35 +1186,53 @@ def submit_comment():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# --- API ADMIN: Statistik Komentar ---
+# --- API ADMIN: Statistik Komentar (SINKRON WEB & MOBILE) ---
 @app.route('/api/admin/comments_analytics')
 @api_login_required
 def admin_comments_analytics():
     try:
+        # Mengambil referensi dari node yang sama dengan Flutter/Web
         ref = firebase_db.reference('user_comments').get()
+        
         if not ref:
             return jsonify({"labels": [], "baik": [], "buruk": [], "list": []})
         
-        comments = list(ref.values())
-        # Kelompokkan data per tanggal
+        # Konversi dictionary Firebase ke list
+        comments = []
+        # Karena Firebase push() menghasilkan ID unik sebagai key
+        for key, val in ref.items():
+            # Tambahkan ID firebase ke dalam data jika diperlukan
+            val['id'] = key 
+            comments.append(val)
+
+        # Kelompokkan data untuk Grafik
         data_per_tgl = {}
         for c in comments:
-            tgl = c['tanggal']
-            sen = c.get('sentimen', 'Baik') # Default Baik jika data lama tidak punya sentimen
+            # Toleransi jika data dari mobile tidak punya field tanggal/sentimen
+            tgl = c.get('tanggal', 'Data Lama')
+            sen = c.get('sentimen', 'Baik')
+            
             if tgl not in data_per_tgl:
                 data_per_tgl[tgl] = {"Baik": 0, "Buruk": 0}
-            data_per_tgl[tgl][sen] += 1
             
+            # Pastikan sentimen sesuai kategori (handle case sensitive)
+            if str(sen).capitalize() == "Baik":
+                data_per_tgl[tgl]["Baik"] += 1
+            else:
+                data_per_tgl[tgl]["Buruk"] += 1
+            
+        # Urutkan tanggal untuk sumbu X grafik
         sorted_dates = sorted(data_per_tgl.keys())
         
         return jsonify({
             "labels": sorted_dates,
             "baik": [data_per_tgl[d]["Baik"] for d in sorted_dates],
             "buruk": [data_per_tgl[d]["Buruk"] for d in sorted_dates],
-            "list": sorted(comments, key=lambda x: x.get('timestamp', 0), reverse=True)[:10]
+            # Urutkan berdasarkan timestamp terbaru agar real-time di Admin
+            "list": sorted(comments, key=lambda x: x.get('timestamp', 0), reverse=True)[:15]
         })
     except Exception as e:
-        print(f"API Error: {e}")
+        print(f"API Error Admin Analytics: {e}")
         return jsonify({"error": str(e)}), 500
     
 if __name__ == '__main__':
