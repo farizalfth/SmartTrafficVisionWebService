@@ -585,18 +585,15 @@
                 // --- LOGIKA REAL-TIME POLLING (GABUNGAN) ---
                 // Menjalankan semua update (Ringkasan & Grafik) dalam satu waktu setiap 3 detik
                 setInterval(() => {
-                    // 1. Update Grafik (Batang & Lingkaran) berdasarkan dropdown statistik
                     const chartId = document.getElementById('chartCctvSelect').value;
-                    if (chartId !== undefined) {
+                    if (chartId) {
+                        // Gunakan trafficPeriod yang sedang terpilih (harian/mingguan/bulanan)
                         fetchTrafficChart(chartId, trafficPeriod);
                         fetchVehicleChart(chartId, 'harian');
                     }
 
-                    // 2. Update Kartu Ringkasan Atas berdasarkan dropdown video player
                     const summaryId = document.getElementById('cctvSelect').value;
                     fetchSummary(summaryId);
-
-                    console.log("Data sinkron dengan Firebase...");
                 }, 3000);
 
                 // Tambahkan Listener pada dropdown grafik
@@ -656,10 +653,25 @@
                 fetchVehicleChart(id, 'harian');
             }
 
+            // Fungsi saat tombol Hari/Minggu/Bulan diklik
             function changeTrafficPeriod(period) {
-                trafficPeriod = period;
-                updateCharts(currentChartId);
+                trafficPeriod = period; // Simpan status periode yang dipilih
+                const chartId = document.getElementById('chartCctvSelect').value;
+                fetchTrafficChart(chartId, trafficPeriod);
             }
+
+            // Perbarui bagian setInterval (Polling) agar tetap di periode yang sama
+            setInterval(() => {
+                const chartId = document.getElementById('chartCctvSelect').value;
+                if (chartId) {
+                    // Gunakan trafficPeriod agar jika sedang di mode 'Bulan', tidak balik ke 'Hari' otomatis
+                    fetchTrafficChart(chartId, trafficPeriod);
+                    fetchVehicleChart(chartId, 'harian');
+                }
+
+                const summaryId = document.getElementById('cctvSelect').value;
+                fetchSummary(summaryId);
+            }, 5000); // Update setiap 5 detik
             function changeVehiclePeriod(period) {
                 vehiclePeriod = period;
                 fetchVehicleChart(currentChartId, period);
@@ -860,6 +872,94 @@
                         btn.innerHTML = '<i data-lucide="send" size="18" class="me-1"></i> Kirim';
                         lucide.createIcons();
                     });
+            }
+
+            function fetchTrafficChart(id, period = 'harian') {
+                if (!id) return;
+
+                // PENTING: Menambahkan parameter &period= agar backend tahu data apa yang harus dikirim
+                let url = `/api/public/traffic_data?cctv_id=${id}&period=${period}`;
+
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        const ctx = document.getElementById('trafficChart').getContext('2d');
+                        if (trafficChartInstance) trafficChartInstance.destroy();
+
+                        if (!data.datasets || !data.labels) return;
+
+                        // 1. Hitung Max Data untuk skala Y
+                        const allTotals = data.labels.map((_, i) =>
+                            (Number(data.datasets.mobil[i]) || 0) + (Number(data.datasets.motor[i]) || 0) +
+                            (Number(data.datasets.bus[i]) || 0) + (Number(data.datasets.truk[i]) || 0)
+                        );
+                        const maxVal = Math.max(...allTotals);
+                        const chartMax = maxVal > 0 ? Math.ceil((maxVal * 1.2) / 100) * 100 : 500;
+
+                        // 2. Logika Label agar Rapi (Sesuai Admin)
+                        const simplifiedLabels = data.labels.map((label, index) => {
+                            const total = allTotals[index];
+
+                            if (period === 'bulanan') {
+                                // Bulanan: Nama Bulan & Total Sigma
+                                return [label, `Σ ${total.toLocaleString()}`];
+                            } else if (period === 'mingguan') {
+                                // Mingguan: ["Minggu 1", "1-7 Jan", "Σ Total"]
+                                const m_name = Array.isArray(label) ? label[0] : label;
+                                const m_date = Array.isArray(label) ? label[1] : "";
+                                return [m_name, m_date, `Σ ${total.toLocaleString()}`];
+                            } else {
+                                // Harian
+                                return [label, `Σ ${total.toLocaleString()}`];
+                            }
+                        });
+
+                        // 3. Atur Ketebalan Batang
+                        let barThickness = 35;
+                        if (period === 'bulanan') barThickness = 18;
+                        if (period === 'mingguan') barThickness = 55;
+
+                        trafficChartInstance = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: simplifiedLabels,
+                                datasets: [
+                                    { label: 'Mobil', data: data.datasets.mobil, backgroundColor: '#00E5FF', barThickness: barThickness },
+                                    { label: 'Motor', data: data.datasets.motor, backgroundColor: '#FFD600', barThickness: barThickness },
+                                    { label: 'Bus', data: data.datasets.bus, backgroundColor: '#00C853', barThickness: barThickness },
+                                    { label: 'Truk', data: data.datasets.truk, backgroundColor: '#FF5252', barThickness: barThickness }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: true, labels: { color: '#fff' } },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}`,
+                                            footer: (items) => `TOTAL: ${items.reduce((a, b) => a + b.raw, 0).toLocaleString()}`
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        stacked: true,
+                                        ticks: { color: '#fff', font: { size: 10 }, maxRotation: 0, autoSkip: false },
+                                        grid: { display: false }
+                                    },
+                                    y: {
+                                        stacked: true,
+                                        beginAtZero: true,
+                                        max: chartMax,
+                                        ticks: { color: '#888', callback: v => v.toLocaleString() },
+                                        grid: { color: 'rgba(255,255,255,0.05)' }
+                                    }
+                                }
+                            }
+                        });
+                    })
+                    .catch(err => console.error("Gagal load grafik:", err));
             }
         </script>
 </body>

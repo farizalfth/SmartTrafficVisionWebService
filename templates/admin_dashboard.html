@@ -1406,6 +1406,85 @@
             // Jalankan setiap 10 detik
             setInterval(updateServerStatus, 10000);
             updateServerStatus();
+
+            function fetchTrafficChart(id, period = 'harian') {
+                let url = `/api/admin/traffic_data?cctv_id=${id}&period=${period}`;
+
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        const ctx = document.getElementById('trafficChart').getContext('2d');
+                        if (trafficChartInstance) trafficChartInstance.destroy();
+
+                        const allTotals = data.labels.map((_, i) =>
+                            (Number(data.datasets.mobil[i]) || 0) + (Number(data.datasets.motor[i]) || 0) +
+                            (Number(data.datasets.bus[i]) || 0) + (Number(data.datasets.truk[i]) || 0)
+                        );
+                        const maxVal = Math.max(...allTotals);
+                        const chartMax = maxVal > 0 ? Math.ceil((maxVal * 1.2) / 100) * 100 : 500;
+
+                        // LABEL SUMBU X (Disederhanakan agar rapi)
+                        const simplifiedLabels = data.labels.map((label, index) => {
+                            const total = allTotals[index];
+                            if (period === 'bulanan') {
+                                return [label, `Σ ${total.toLocaleString()}`];
+                            } else if (period === 'mingguan') {
+                                // label adalah array [Minggu X, Tgl-Tgl]
+                                return [label[0], label[1], `Σ ${total.toLocaleString()}`];
+                            } else {
+                                return [label, `Σ ${total.toLocaleString()}`];
+                            }
+                        });
+
+                        let barThickness = period === 'bulanan' ? 18 : (period === 'mingguan' ? 55 : 35);
+
+                        trafficChartInstance = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: simplifiedLabels,
+                                datasets: [
+                                    { label: 'Mobil', data: data.datasets.mobil, backgroundColor: '#00E5FF', barThickness: barThickness },
+                                    { label: 'Motor', data: data.datasets.motor, backgroundColor: '#FFD600', barThickness: barThickness },
+                                    { label: 'Bus', data: data.datasets.bus, backgroundColor: '#00C853', barThickness: barThickness },
+                                    { label: 'Truk', data: data.datasets.truk, backgroundColor: '#FF5252', barThickness: barThickness }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: true, labels: { color: '#fff', font: { size: 11 } } },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: (context) => `${context.dataset.label}: ${context.raw.toLocaleString()}`,
+                                            footer: (items) => {
+                                                let sum = items.reduce((a, b) => a + b.raw, 0);
+                                                return `TOTAL: ${sum.toLocaleString()}`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        stacked: true,
+                                        ticks: { color: '#fff', font: { size: 10 }, maxRotation: 0 },
+                                        grid: { display: false }
+                                    },
+                                    y: {
+                                        stacked: true,
+                                        beginAtZero: true,
+                                        max: chartMax,
+                                        ticks: {
+                                            color: '#888',
+                                            callback: v => v.toLocaleString()
+                                        },
+                                        grid: { color: 'rgba(255,255,255,0.05)' }
+                                    }
+                                }
+                            }
+                        });
+                    });
+            }
         </script>
 </body>
 

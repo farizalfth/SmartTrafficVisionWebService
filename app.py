@@ -15,6 +15,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 import calendar
+from flask import request, jsonify
 
 # ===== FIREBASE INTEGRATION =====
 import firebase_admin
@@ -58,7 +59,7 @@ VEHICLE_CLASSES = [2, 3, 5, 7]
 cctv_list = [
     {'id': '1', 'name': 'CCTV Pontianak (Simpang Garuda)', 'url': 'https://www.youtube.com/watch?v=_xzKYnk6zSE'},
     {'id': '2', 'name': 'CTV Pontianak (Tugu Khatulistiwa)', 'url': 'https://www.youtube.com/watch?v=BEw38LHC5x4'},
-    {'id': '3', 'name': 'CTV Demak (Alun-Alun)', 'url': 'https://www.youtube.com/watch?v=zf8RYyF6BoI'},
+    {'id': '3', 'name': 'CTV Demak (Alun-Alun)', 'url': 'https://www.youtube.com/embed/aboCZ7gkclk'},
     {'id': '4', 'name': 'CCTV Demak (Pasar Bintoro)', 'url': 'https://www.youtube.com/watch?v=7c4CsGkmBu8'},
     {'id': '5', 'name': 'CCTV Demak (Pertigaan Trengguli)', 'url': 'https://www.youtube.com/watch?v=5nw3G2jtWaU'}
 ]
@@ -232,8 +233,8 @@ def fetch_cctv_list():
             "name": "CCTV Demak (Alun-Alun)", 
             "status": "Aktif",
             "lat": -6.894621, "lon": 110.636922,
-            "stream_url": "https://www.youtube.com/embed/zf8RYyF6BoI", 
-            "youtube_link": "https://www.youtube.com/watch?v=zf8RYyF6BoI" 
+            "stream_url": "https://www.youtube.com/embed/aboCZ7gkclk", 
+            "youtube_link": "https://www.youtube.com/watch?v=aboCZ7gkclk" 
         },
         { 
             "id": 4, "name": "CCTV Demak (Pasar Bintoro)", "status": "Aktif",
@@ -569,32 +570,79 @@ def api_public_dashboard_summary():
 @app.route('/api/public/traffic_data')
 def api_public_traffic_data():
     cctv_id = request.args.get('cctv_id')
-    # Jika cctv_id kosong, bisa di-default ke salah satu ID, misal '5' atau ditangani khusus
+    period = request.args.get('period', 'harian') # Ambil parameter period
+    
     if not cctv_id:
-        return jsonify({"labels": [], "datasets": {}})
+        return jsonify({"labels": [], "datasets": {"mobil":[], "motor":[], "bus":[], "truk":[]}})
 
     try:
         ref = firebase_db.reference(f'traffic_stats/{cctv_id}/daily_reports')
-        # Ambil 7 hari terakhir
-        daily_data = ref.order_by_key().limit_to_last(7).get()
+        # Ambil semua data untuk diproses agregasinya (Mingguan/Bulanan butuh data lebih dari 7 hari)
+        all_data = ref.get() or {}
         
+        now = datetime.now()
+        curr_year = now.year
+        curr_month = now.month
+        month_name = now.strftime('%B')
+
         labels = []
         data_mobil, data_motor, data_bus, data_truk = [], [], [], []
 
-        if daily_data:
-            for date_key in sorted(daily_data.keys()):
-                val = daily_data[date_key]
-                detail = val.get('detail', {})
+        if period == 'harian':
+            # LOGIKA: 7 Hari Terakhir
+            for i in range(6, -1, -1):
+                date_key = (now - timedelta(days=i)).strftime('%Y-%m-%d')
+                labels.append(datetime.strptime(date_key, "%Y-%m-%d").strftime("%d %b"))
                 
-                # Format label tanggal (13 Jan)
-                date_obj = datetime.strptime(date_key, "%Y-%m-%d")
-                labels.append(date_obj.strftime("%d %b"))
+                det = all_data.get(date_key, {}).get('detail', {})
+                data_mobil.append(det.get('mobil', 0))
+                data_motor.append(det.get('motor', 0))
+                data_bus.append(det.get('bus', 0))
+                data_truk.append(det.get('truk', 0))
+
+        elif period == 'mingguan':
+            # LOGIKA: Pembagian Tetap 1-7, 8-14, 15-21, 22-Akhir Bulan
+            last_day = calendar.monthrange(curr_year, curr_month)[1]
+            ranges = [(1, 7), (8, 14), (15, 21), (22, last_day)]
+            
+            for i, (start, end) in enumerate(ranges):
+                labels.append([f"Minggu {i+1}", f"{start}-{end} {month_name[:3]}"])
                 
-                # Masukkan data kendaraan
-                data_mobil.append(detail.get('mobil', 0))
-                data_motor.append(detail.get('motor', 0))
-                data_bus.append(detail.get('bus', 0))
-                data_truk.append(detail.get('truk', 0))
+                sum_mobil = sum_motor = sum_bus = sum_truk = 0
+                for d in range(start, end + 1):
+                    date_key = f"{curr_year}-{str(curr_month).zfill(2)}-{str(d).zfill(2)}"
+                    if date_key in all_data:
+                        det = all_data[date_key].get('detail', {})
+                        sum_mobil += det.get('mobil', 0)
+                        sum_motor += det.get('motor', 0)
+                        sum_bus += det.get('bus', 0)
+                        sum_truk += det.get('truk', 0)
+                
+                data_mobil.append(sum_mobil)
+                data_motor.append(sum_motor)
+                data_bus.append(sum_bus)
+                data_truk.append(sum_truk)
+
+        elif period == 'bulanan':
+            # LOGIKA: 12 Bulan (Jan - Des) Tahun Berjalan
+            month_list = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+            for i, m_short in enumerate(month_list):
+                labels.append(m_short)
+                month_prefix = f"{curr_year}-{str(i+1).zfill(2)}"
+                
+                sum_mobil = sum_motor = sum_bus = sum_truk = 0
+                for date_key, val in all_data.items():
+                    if date_key.startswith(month_prefix):
+                        det = val.get('detail', {})
+                        sum_mobil += det.get('mobil', 0)
+                        sum_motor += det.get('motor', 0)
+                        sum_bus += det.get('bus', 0)
+                        sum_truk += det.get('truk', 0)
+                
+                data_mobil.append(sum_mobil)
+                data_motor.append(sum_motor)
+                data_bus.append(sum_bus)
+                data_truk.append(sum_truk)
 
         return jsonify({
             "labels": labels,
@@ -607,11 +655,7 @@ def api_public_traffic_data():
         })
     except Exception as e:
         print(f"Error Public Traffic API: {e}")
-        return jsonify({"labels": [], "datasets": {}})
-
-@app.route('/api/public/analytics_data')
-def api_public_analytics_data():
-    return jsonify(get_firebase_logic_history(request.args.get('cctv_id'), request.args.get('period')))
+        return jsonify({"labels": [], "datasets": {"mobil":[], "motor":[], "bus":[], "truk":[]}})
 
 # =========================================================================
 # ===== API SERVER (PERSISTENSI DATA STABIL CCTV) =====
@@ -678,44 +722,77 @@ def api_admin_vehicle_distribution():
 @api_login_required
 def api_admin_traffic_data():
     cctv_id = request.args.get('cctv_id')
+    period = request.args.get('period', 'harian')
+    
     try:
         ref = firebase_db.reference(f'traffic_stats/{cctv_id}/daily_reports')
-        # Ambil 7 hari terakhir
-        daily_data = ref.order_by_key().limit_to_last(7).get()
-        
-        labels = []
-        data_mobil = []
-        data_motor = []
-        data_bus = []
-        data_truk = []
+        all_data = ref.get() or {}
 
-        if daily_data:
-            for date_key in sorted(daily_data.keys()):
-                val = daily_data[date_key]
-                detail = val.get('detail', {})
+        # Ambil info waktu sekarang
+        now = datetime.now()
+        curr_year = now.year
+        curr_month = now.month
+        month_name = now.strftime('%B')
+
+        labels, d_mobil, d_motor, d_bus, d_truk = [], [], [], [], []
+
+        if period == 'harian':
+            # 7 Hari terakhir
+            for i in range(6, -1, -1):
+                dt = (now - timedelta(days=i)).strftime('%Y-%m-%d')
+                labels.append(datetime.strptime(dt, '%Y-%m-%d').strftime('%d %b'))
+                det = all_data.get(dt, {}).get('detail', {})
+                d_mobil.append(det.get('mobil', 0)); d_motor.append(det.get('motor', 0))
+                d_bus.append(det.get('bus', 0)); d_truk.append(det.get('truk', 0))
+
+        elif period == 'mingguan':
+            # PEMBAGIAN TETAP: 1-7, 8-14, 15-21, 22-Akhir Bulan
+            # Mendapatkan jumlah hari dalam bulan ini
+            last_day = calendar.monthrange(curr_year, curr_month)[1]
+            ranges = [(1, 7), (8, 14), (15, 21), (22, last_day)]
+            
+            for i, (start, end) in enumerate(ranges):
+                labels.append([f"Minggu {i+1}", f"{start}-{end} {month_name[:3]}"])
                 
-                # Format Label Tanggal
-                date_obj = datetime.strptime(date_key, "%Y-%m-%d")
-                labels.append(date_obj.strftime("%d %b"))
+                sum_mobil = sum_motor = sum_bus = sum_truk = 0
+                for day in range(start, end + 1):
+                    # Format: 2026-01-01
+                    date_key = f"{curr_year}-{str(curr_month).zfill(2)}-{str(day).zfill(2)}"
+                    if date_key in all_data:
+                        det = all_data[date_key].get('detail', {})
+                        sum_mobil += det.get('mobil', 0)
+                        sum_motor += det.get('motor', 0)
+                        sum_bus += det.get('bus', 0)
+                        sum_truk += det.get('truk', 0)
                 
-                # Ambil rincian kendaraan (Default 0 jika data belum ada)
-                data_mobil.append(detail.get('mobil', 0))
-                data_motor.append(detail.get('motor', 0))
-                data_bus.append(detail.get('bus', 0))
-                data_truk.append(detail.get('truk', 0))
+                d_mobil.append(sum_mobil); d_motor.append(sum_motor)
+                d_bus.append(sum_bus); d_truk.append(sum_truk)
+
+        elif period == 'bulanan':
+            # Jan - Des tahun berjalan
+            month_list = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+            for i, m_short in enumerate(month_list):
+                labels.append(m_short)
+                month_prefix = f"{curr_year}-{str(i+1).zfill(2)}"
+                
+                sum_mobil = sum_motor = sum_bus = sum_truk = 0
+                for date_key, val in all_data.items():
+                    if date_key.startswith(month_prefix):
+                        det = val.get('detail', {})
+                        sum_mobil += det.get('mobil', 0)
+                        sum_motor += det.get('motor', 0)
+                        sum_bus += det.get('bus', 0)
+                        sum_truk += det.get('truk', 0)
+                
+                d_mobil.append(sum_mobil); d_motor.append(sum_motor)
+                d_bus.append(sum_bus); d_truk.append(sum_truk)
 
         return jsonify({
             "labels": labels,
-            "datasets": {
-                "mobil": data_mobil,
-                "motor": data_motor,
-                "bus": data_bus,
-                "truk": data_truk
-            }
+            "datasets": {"mobil": d_mobil, "motor": d_motor, "bus": d_bus, "truk": d_truk}
         })
     except Exception as e:
-        print(f"Error Chart Detail: {e}")
-        return jsonify({"labels": [], "datasets": {}})
+        return jsonify({"labels": [], "datasets": {}, "error": str(e)})
 
 @app.route('/api/cctv_locations')
 def api_cctv_locations():
