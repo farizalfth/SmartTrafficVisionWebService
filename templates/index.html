@@ -7,6 +7,7 @@
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/icons.css') }}">
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <!-- Lucide Icons -->
@@ -149,12 +150,17 @@
             transform: translateY(-5px);
         }
         .feature-icon {
-            background-color: rgba(0, 229, 255, 0.1);
+            --chip: #00E5FF;
+            background: linear-gradient(135deg,
+                color-mix(in srgb, var(--chip) 20%, transparent),
+                color-mix(in srgb, var(--chip) 5%, transparent));
             width: 70px; height: 70px;
-            border-radius: 50%;
+            border-radius: 20px;
+            border: 1px solid color-mix(in srgb, var(--chip) 35%, transparent);
             display: flex; align-items: center; justify-content: center;
             margin: 0 auto 20px;
-            color: var(--accent-cyan);
+            color: var(--chip);
+            box-shadow: 0 8px 24px color-mix(in srgb, var(--chip) 20%, transparent);
         }
         /* Perbaikan warna teks deskripsi fitur */
         .feature-desc {
@@ -195,6 +201,153 @@
             border-top: 1px solid #333;
             text-align: center;
         }
+
+        /* ====== ANIMATIONS & ENHANCEMENTS ====== */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121212;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00E5FF, #00B8D4);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #00B8D4, #0091A9);
+        }
+
+        /* Scroll Reveal */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-left { transform: translateX(-60px); }
+        .reveal-right { transform: translateX(60px); }
+        .reveal-left.visible, .reveal-right.visible { transform: translateX(0); }
+
+        /* Animated Gradient Text */
+        .gradient-text {
+            background: linear-gradient(90deg, #fff, #00E5FF, #00B8D4, #fff);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 6s ease infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Floating particles */
+        .particles {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .particle {
+            position: absolute;
+            bottom: -10px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(0, 229, 255, 0.4);
+            animation: floatUp linear infinite;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(-110vh) translateX(40px); opacity: 0; }
+        }
+
+        /* Glow pulse for hero */
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 229, 255, 0.4); }
+            50% { box-shadow: 0 0 45px rgba(0, 229, 255, 0.8); }
+        }
+        .btn-cta {
+            animation: pulseGlow 3s ease-in-out infinite;
+        }
+
+        /* Hero content entrance */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .hero-content > * {
+            animation: fadeInUp 1s ease both;
+        }
+        .hero-content > *:nth-child(2) { animation-delay: 0.15s; }
+        .hero-content > *:nth-child(3) { animation-delay: 0.3s; }
+
+        /* Feature card shine effect */
+        .feature-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: -100%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.12), transparent);
+            transform: skewX(-20deg);
+            transition: left 0.6s ease;
+        }
+        .feature-card:hover::before {
+            left: 130%;
+        }
+        .feature-icon {
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .feature-card:hover .feature-icon {
+            transform: rotate(-8deg) scale(1.15);
+        }
+
+        /* Map glow on hover */
+        .map-container {
+            transition: border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+        .map-container:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 10px 50px rgba(0, 229, 255, 0.15);
+        }
+
+        /* CCTV pulsing marker */
+        .cctv-marker {
+            position: relative;
+            width: 22px;
+            height: 22px;
+        }
+        .cctv-dot {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: #00E5FF;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.8);
+            animation: markerPulse 1.8s ease-out infinite;
+        }
+        @keyframes markerPulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.6); }
+            70% { box-shadow: 0 0 0 16px rgba(0, 229, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); }
+        }
     </style>
 </head>
 <body>
@@ -211,7 +364,8 @@
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <ul class="navbar-nav align-items-center">
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('static_page') }}">Statistik</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('static_page') }}">Statistik & Analitik</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cctv_page') }}">Peta CCTV</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('read_artikel') }}">Artikel</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">Tentang Kami</a></li>
                     <li class="nav-item ms-lg-3">
@@ -225,8 +379,9 @@
     <!-- HERO SECTION -->
     <section class="hero-section">
         <div class="hero-bg"></div>
+        <div class="particles" id="particles"></div>
         <div class="hero-content">
-            <h1 class="hero-title">Smart Traffic Vision</h1>
+            <h1 class="hero-title gradient-text">Smart Traffic Vision</h1>
             <p class="hero-subtitle">
                 Solusi cerdas pemantauan lalu lintas berbasis Artificial Intelligence. 
                 Dapatkan data kepadatan, kecepatan, dan pantauan visual secara real-time untuk kota yang lebih baik.
@@ -242,9 +397,9 @@
     <section class="features-section">
         <div class="container">
             <div class="row g-4">
-                <div class="col-md-4">
+                <div class="col-md-4 reveal">
                     <div class="feature-card">
-                        <div class="feature-icon"><i data-lucide="video" size="32"></i></div>
+                        <div class="feature-icon" style="--chip:#00E5FF;"><i data-lucide="video" size="32"></i></div>
                         <h4 class="text-white fw-bold">Real-time Monitoring</h4>
                         <!-- Deskripsi ditambahkan -->
                         <p class="feature-desc">
@@ -252,9 +407,9 @@
                         </p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4 reveal">
                     <div class="feature-card">
-                        <div class="feature-icon"><i data-lucide="cpu" size="32"></i></div>
+                        <div class="feature-icon" style="--chip:#B388FF;"><i data-lucide="cpu" size="32"></i></div>
                         <h4 class="text-white fw-bold">AI Detection</h4>
                         <!-- Deskripsi ditambahkan -->
                         <p class="feature-desc">
@@ -262,9 +417,9 @@
                         </p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4 reveal">
                     <div class="feature-card">
-                        <div class="feature-icon"><i data-lucide="bar-chart-2" size="32"></i></div>
+                        <div class="feature-icon" style="--chip:#00E676;"><i data-lucide="bar-chart-2" size="32"></i></div>
                         <h4 class="text-white fw-bold">Data Analitik</h4>
                         <!-- Deskripsi ditambahkan -->
                         <p class="feature-desc">
@@ -279,13 +434,13 @@
     <!-- MAP SECTION -->
     <section class="map-section" id="map-area">
         <div class="container">
-            <div class="text-center mb-5">
+            <div class="text-center mb-5 reveal">
                 <h2 class="text-white fw-bold mb-2">Sebaran Lokasi CCTV</h2>
                 <!-- Warna teks diperbaiki agar terlihat -->
                 <p class="section-subtitle">Pantau titik lokasi kamera pengawas di seluruh kota.</p>
             </div>
             
-            <div class="map-container">
+            <div class="map-container reveal">
                 <div id="map"></div>
             </div>
         </div>
@@ -304,6 +459,35 @@
     <script>
         lucide.createIcons();
 
+        // ---- Scroll Reveal ----
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        // ---- Particle background ----
+        const particleContainer = document.getElementById('particles');
+        if (particleContainer) {
+            const count = 25;
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random() * 5 + 3;
+                p.style.width = size + 'px';
+                p.style.height = size + 'px';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (Math.random() * 10 + 8) + 's';
+                p.style.animationDelay = (Math.random() * 10) + 's';
+                p.style.opacity = Math.random() * 0.6 + 0.2;
+                particleContainer.appendChild(p);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // 1. Inisialisasi Peta
             var map = L.map('map').setView([-6.9932, 110.4203], 9);
@@ -321,23 +505,34 @@
                     if (data.length > 0) {
                         data.forEach(cctv => {
                             if (cctv.lat && cctv.lon) {
-                                // Popup sederhana
+                                // Ikon marker custom (pulsing dot)
+                                var icon = L.divIcon({
+                                    className: '',
+                                    html: `<div class="cctv-marker"><span class="cctv-dot"></span></div>`,
+                                    iconSize: [22, 22],
+                                    iconAnchor: [11, 11],
+                                    popupAnchor: [0, -14]
+                                });
+                                // Popup dengan status lalu lintas
+                                var statusColor = cctv.traffic_status === 'Lancar' ? '#00C853' :
+                                    (cctv.traffic_status === 'Padat' ? '#FFD600' : '#FF5252');
                                 var popupContent = `
-                                    <div style="text-align:center;">
-                                        <b>${cctv.name}</b><br>
-                                        <span style="color:green;">● ${cctv.status}</span><br>
-                                        <a href="/dashboard">Lihat Live</a>
+                                    <div style="text-align:center;font-family:Poppins,sans-serif;">
+                                        <b style="color:#333;">${cctv.name}</b><br>
+                                        <span style="color:${statusColor};font-weight:600;">● ${cctv.traffic_status}</span>
+                                        <span style="color:#666;"> · ${cctv.current_total} kendaraan</span><br>
+                                        <a href="/dashboard" style="color:#00B8D4;font-weight:600;">Lihat Live →</a>
                                     </div>
                                 `;
-                                var marker = L.marker([cctv.lat, cctv.lon])
-                                    .bindPopup(popupContent)
+                                var marker = L.marker([cctv.lat, cctv.lon], { icon: icon })
+                                    .bindPopup(popupContent, { closeButton: false })
                                     .addTo(map);
                                 markers.push(marker);
                             }
                         });
                         // Fit bounds agar semua marker terlihat
                         var group = new L.featureGroup(markers);
-                        map.fitBounds(group.getBounds(), {padding: [50, 50]});
+                        map.fitBounds(group.getBounds(), { padding: [50, 50] });
                     }
                 })
                 .catch(err => console.error("Gagal memuat peta:", err));

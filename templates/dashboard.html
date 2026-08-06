@@ -8,6 +8,7 @@
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/icons.css') }}">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Google Fonts -->
@@ -98,6 +99,18 @@
             margin-bottom: 15px;
             width: 48px;
             height: 48px;
+        }
+
+        .summary-chip {
+            width: 58px;
+            height: 58px;
+            border-radius: 18px;
+            margin-bottom: 15px;
+        }
+
+        .summary-chip .lucide {
+            width: 28px;
+            height: 28px;
         }
 
         .summary-card .value {
@@ -224,16 +237,26 @@
             align-items: center;
             padding: 10px;
             background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
             border-radius: 8px;
             margin-bottom: 10px;
+            transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+        }
+
+        .legend-item:hover {
+            transform: translateX(4px);
+            border-color: rgba(0, 229, 255, 0.25);
+            background: rgba(0, 229, 255, 0.05);
         }
 
         .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            border-radius: 5px;
             margin-right: 8px;
             display: inline-block;
+            vertical-align: middle;
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.35);
         }
 
         /* Form Controls */
@@ -260,42 +283,191 @@
             margin-top: 50px;
         }
 
-        /* Perbaikan Floating Label untuk Tema Gelap */
-        .form-floating>label {
-            color: var(--text-muted) !important;
-            background-color: transparent !important;
-            /* Hilangkan kotak putih */
-            padding: 1rem 0.75rem;
+        /* ====== FORM KOMENTAR (label statis, tanpa floating agar tidak tumpang tindih) ====== */
+        .comment-label {
+            display: block;
+            color: #cfcfcf;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 6px;
         }
 
-        .form-floating>.form-control {
-            background-color: #1a1a1a !important;
-            color: white !important;
-            border: 1px solid #444 !important;
-            height: calc(3.5rem + 2px);
-            /* Standar tinggi floating label */
+        .form-dark {
+            background-color: #141414 !important;
+            color: #fff !important;
+            border: 1px solid rgba(0, 229, 255, 0.28) !important;
+            border-radius: 10px !important;
+            height: 52px;
+            font-size: 0.95rem;
         }
 
-        /* Warna label saat input aktif atau berisi teks */
-        .form-floating>.form-control:focus~label,
-        .form-floating>.form-control:not(:placeholder-shown)~label {
-            transform: scale(.85) translateY(-1rem) translateX(.15rem);
-            color: var(--accent-cyan) !important;
+        .form-dark::placeholder {
+            color: #9aa0a6;
             opacity: 1;
+        }
+
+        .form-dark:focus {
+            background-color: #141414 !important;
+            color: #fff !important;
+            border-color: var(--accent-cyan) !important;
+            box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.2) !important;
         }
 
         /* Tombol Kirim */
         .btn-kirim {
-            background-color: var(--accent-cyan) !important;
-            color: black !important;
+            background: linear-gradient(135deg, #00E5FF, #00B8D4) !important;
+            color: #0a0a0a !important;
             font-weight: 700 !important;
             border: none;
+            border-radius: 10px !important;
+            height: 52px;
+            white-space: nowrap;
             transition: 0.3s;
         }
 
         .btn-kirim:hover {
+            transform: scale(1.04);
+            box-shadow: 0 8px 20px rgba(0, 229, 255, 0.35);
+        }
+
+        /* ====== ANIMATIONS & ENHANCEMENTS ====== */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121212;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00E5FF, #00B8D4);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #00B8D4, #0091A9);
+        }
+
+        /* Scroll Reveal */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Animated gradient title */
+        .gradient-text {
+            background: linear-gradient(90deg, #fff, #00E5FF, #00B8D4, #fff);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 6s ease infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Summary card glow + counter animation */
+        .summary-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .summary-card::after {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.08) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+        .summary-card:hover::after {
+            opacity: 1;
+        }
+        @keyframes cardGlow {
+            0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+            50% { box-shadow: 0 8px 40px rgba(0, 229, 255, 0.25); }
+        }
+        .summary-card {
+            animation: cardGlow 4s ease-in-out infinite;
+        }
+        .summary-card:nth-child(2) { animation-delay: 0.5s; }
+        .summary-card:nth-child(3) { animation-delay: 1s; }
+        .summary-card:nth-child(4) { animation-delay: 1.5s; }
+
+        /* Value entrance */
+        @keyframes countPop {
+            0% { opacity: 0; transform: scale(0.6); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .summary-card .value {
+            animation: countPop 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* Dashboard card hover lift */
+        .dashboard-card {
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 12px 40px rgba(0, 229, 255, 0.12);
+        }
+
+        /* Video container glow */
+        .video-container {
+            transition: border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+        .video-container:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 30px rgba(0, 229, 255, 0.15);
+        }
+
+        /* Period toggle smooth */
+        .period-toggle label {
+            transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .period-toggle input:checked+label {
             transform: scale(1.05);
-            background-color: #00B8D4 !important;
+        }
+
+        /* Legend item hover */
+        .legend-item {
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+        .legend-item:hover {
+            background: rgba(0, 229, 255, 0.08) !important;
+            transform: translateX(5px);
+        }
+
+        /* Navbar link hover underline */
+        .navbar-nav .nav-link {
+            position: relative;
+        }
+        .navbar-nav .nav-link::after {
+            content: "";
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-cyan);
+            transition: width 0.3s ease;
+        }
+        .navbar-nav .nav-link:hover::after,
+        .navbar-nav .nav-link.active::after {
+            width: 100%;
         }
     </style>
 </head>
@@ -310,6 +482,13 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('static_page') }}">Statistik & Analitik</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cctv_page') }}">Peta CCTV</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('read_artikel') }}">Artikel</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">Tentang Kami</a></li>
+                </ul>
                 <a href="{{ url_for('login') }}" class="btn btn-outline-light ms-lg-3">Login Admin</a>
             </div>
         </div>
@@ -318,32 +497,40 @@
     <div class="container mt-4">
 
         <!-- BAGIAN 1: RINGKASAN LALU LINTAS -->
-        <h4 class="mb-3 fw-bold text-white text-center">Ringkasan Lalu Lintas Real-time</h4>
+        <h4 class="mb-3 fw-bold text-white text-center gradient-text">Ringkasan Lalu Lintas Real-time</h4>
         <div class="row g-4 mb-5 justify-content-center">
-            <div class="col-md-3 col-sm-6">
+            <div class="col-md-3 col-sm-6 reveal">
                 <div class="summary-card">
-                    <i data-lucide="car" class="icon" style="color: white;"></i>
+                    <div class="icon-chip summary-chip" style="--chip:#00E5FF;">
+                        <i data-lucide="car"></i>
+                    </div>
                     <div class="value" id="kendaraanHariIni">-</div>
                     <div class="label">Total Kendaraan</div>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6">
+            <div class="col-md-3 col-sm-6 reveal">
                 <div class="summary-card">
-                    <i data-lucide="activity" class="icon" style="color: var(--accent-yellow);"></i>
+                    <div class="icon-chip summary-chip" style="--chip:#FFD600;">
+                        <i data-lucide="activity"></i>
+                    </div>
                     <div class="value" id="kepadatanTertinggi">-</div>
                     <div class="label">Kepadatan Saat Ini</div>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6">
+            <div class="col-md-3 col-sm-6 reveal">
                 <div class="summary-card">
-                    <i data-lucide="gauge" class="icon" style="color: var(--accent-cyan);"></i>
+                    <div class="icon-chip summary-chip" style="--chip:#00E5FF;">
+                        <i data-lucide="gauge"></i>
+                    </div>
                     <div class="value" id="rataRataKecepatan">-</div>
                     <div class="label">Rata-rata Kecepatan</div>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6">
+            <div class="col-md-3 col-sm-6 reveal">
                 <div class="summary-card">
-                    <i data-lucide="camera" class="icon" style="color: #FF5252;"></i>
+                    <div class="icon-chip summary-chip" style="--chip:#FF5252;">
+                        <i data-lucide="camera"></i>
+                    </div>
                     <div class="value" id="kameraAktif">-</div>
                     <div class="label">Kamera Aktif</div>
                 </div>
@@ -353,7 +540,7 @@
         <!-- BAGIAN 2: LIVE FEED & ARTIKEL -->
         <div class="row g-4 mb-5">
             <!-- Live Feed Player -->
-            <div class="col-lg-8">
+            <div class="col-lg-8 reveal">
                 <div class="dashboard-card">
                     <div class="card-header-custom">
                         <h4>Live Feed CCTV Utama</h4>
@@ -373,12 +560,12 @@
             </div>
 
             <!-- Artikel Terbaru -->
-            <div class="col-lg-4">
+            <div class="col-lg-4 reveal">
                 <div class="dashboard-card">
                     <div class="card-header-custom">
                         <h4>Artikel Terbaru</h4>
                         <a href="{{ url_for('read_artikel') }}"
-                            class="btn btn-sm btn-outline-secondary rounded-pill">Lihat Semua</a>
+                            class="btn btn-sm btn-info rounded-pill">Lihat Semua</a>
                     </div>
                     <div>
                         {% for article in latest_articles %}
@@ -401,8 +588,8 @@
         </div>
 
         <!-- BAGIAN 3: STATISTIK & ANALITIK (USER VIEW) -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="fw-bold text-white mb-0">Statistik & Analitik</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3 reveal">
+            <h4 class="fw-bold text-white mb-0 gradient-text">Statistik & Analitik</h4>
             <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 250px;"
                 id="chartCctvSelect">
                 <option value="">Semua Data CCTV</option>
@@ -411,7 +598,7 @@
 
         <div class="row g-4 mb-5">
             <!-- KIRI: Laporan Data Kendaraan (Tinggi 850px) -->
-            <div class="col-lg-7">
+            <div class="col-lg-7 reveal">
                 <div class="dashboard-card"
                     style="height: 850px; display: flex; flex-direction: column; overflow: hidden;">
                     <div class="card-header-custom">
@@ -436,7 +623,7 @@
             </div>
 
             <!-- KANAN: Distribusi Kendaraan (REAL TIME) -->
-            <div class="col-lg-5">
+            <div class="col-lg-5 reveal">
                 <div class="dashboard-card"
                     style="height: 850px; display: flex; flex-direction: column; overflow: hidden;">
                     <div class="card-header-custom">
@@ -453,22 +640,22 @@
                         <div class="chart-legend-custom w-100 px-4">
                             <div class="legend-item d-flex justify-content-between align-items-center mb-3 p-2"
                                 style="background: rgba(255,255,255,0.02); border-radius: 8px;">
-                                <div><span class="legend-color" style="background: #00E5FF;"></span>Mobil</div>
+                                <div><span class="legend-color" style="background: linear-gradient(135deg, #4DE8FF, #00B8D4);"></span>Mobil</div>
                                 <span class="fw-bold text-info fs-5" id="val-mobil">0%</span>
                             </div>
                             <div class="legend-item d-flex justify-content-between align-items-center mb-3 p-2"
                                 style="background: rgba(255,255,255,0.02); border-radius: 8px;">
-                                <div><span class="legend-color" style="background: #FFD600;"></span>Motor</div>
+                                <div><span class="legend-color" style="background: linear-gradient(135deg, #FFE45E, #FFC400);"></span>Motor</div>
                                 <span class="fw-bold text-info fs-5" id="val-motor">0%</span>
                             </div>
                             <div class="legend-item d-flex justify-content-between align-items-center mb-3 p-2"
                                 style="background: rgba(255,255,255,0.02); border-radius: 8px;">
-                                <div><span class="legend-color" style="background: #00C853;"></span>Bus</div>
+                                <div><span class="legend-color" style="background: linear-gradient(135deg, #5CF3B2, #00A86B);"></span>Bus</div>
                                 <span class="fw-bold text-info fs-5" id="val-bus">0%</span>
                             </div>
                             <div class="legend-item d-flex justify-content-between align-items-center mb-3 p-2"
                                 style="background: rgba(255,255,255,0.02); border-radius: 8px;">
-                                <div><span class="legend-color" style="background: #FF5252;"></span>Truk</div>
+                                <div><span class="legend-color" style="background: linear-gradient(135deg, #FF7A70, #E53935);"></span>Truk</div>
                                 <span class="fw-bold text-info fs-5" id="val-truk">0%</span>
                             </div>
                         </div>
@@ -479,7 +666,7 @@
 
         <!-- KOLOM KOMENTAR USER -->
         <div class="row mb-5">
-            <div class="col-12">
+            <div class="col-12 reveal">
                 <div class="dashboard-card border-0"
                     style="background-color: #1e1e1e; border-radius: 16px; padding: 25px;">
                     <div class="d-flex align-items-center mb-4">
@@ -490,25 +677,19 @@
                     <div class="row g-3">
                         <!-- Input Nama -->
                         <div class="col-md-4">
-                            <div class="form-floating">
-                                <input type="text" id="comm_nama"
-                                    class="form-control bg-dark text-white border-secondary" placeholder="Nama Lengkap">
-                                <label class="text-muted">Nama Lengkap</label>
-                            </div>
+                            <label for="comm_nama" class="comment-label"><i data-lucide="user" size="14" class="me-1"></i>Nama Lengkap</label>
+                            <input type="text" id="comm_nama"
+                                class="form-control form-dark" placeholder="Masukkan nama Anda">
                         </div>
 
-                        <!-- Input Pesan -->
+                        <!-- Input Pesan + Kirim -->
                         <div class="col-md-8">
-                            <div class="input-group" style="height: 58px;">
-                                <div class="form-floating flex-grow-1">
-                                    <input type="text" id="comm_pesan"
-                                        class="form-control bg-dark text-white border-secondary"
-                                        style="border-radius: 10px 0 0 10px !important;" placeholder="Komentar">
-                                    <label class="text-muted">Tulis Ulasan atau saran anda...</label>
-                                </div>
-                                <!-- Pastikan ada onclick="sendComment()" -->
-                                <button class="btn btn-info text-dark fw-bold px-4" type="button" id="btnKirim"
-                                    onclick="sendComment()" style="border-radius: 0 10px 10px 0 !important;">
+                            <label for="comm_pesan" class="comment-label"><i data-lucide="message-circle" size="14" class="me-1"></i>Tulis Ulasan / Saran</label>
+                            <div class="d-flex gap-2">
+                                <input type="text" id="comm_pesan"
+                                    class="form-control form-dark flex-grow-1" placeholder="Tulis komentar Anda di sini...">
+                                <button class="btn btn-kirim px-4" type="button" id="btnKirim"
+                                    onclick="sendComment()">
                                     <i data-lucide="send" size="18" class="me-1"></i> Kirim
                                 </button>
                             </div>
@@ -535,6 +716,17 @@
         <script>
             lucide.createIcons();
 
+            // --- SCROLL REVEAL ---
+            const revealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        revealObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12 });
+            document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
             // --- GLOBAL VARS ---
             let currentFeedId = ""; // Default kosong untuk "Semua CCTV"
             let currentChartId = ""; // Default kosong untuk "Semua CCTV"
@@ -542,6 +734,39 @@
             let vehiclePeriod = 'harian';
             let trafficChartInstance = null;
             let vehicleChartInstance = null;
+
+            // --- HELPER GRADIENT GRAFIK ---
+            function barGradient(context, topColor, bottomColor) {
+                const { ctx, chartArea } = context.chart;
+                if (!chartArea) return topColor;
+                const g = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                g.addColorStop(0, bottomColor);
+                g.addColorStop(1, topColor);
+                return g;
+            }
+
+            const chartTooltipStyle = {
+                backgroundColor: 'rgba(15,15,15,0.95)',
+                titleColor: '#fff',
+                bodyColor: '#e0e0e0',
+                borderColor: 'rgba(0,229,255,0.35)',
+                borderWidth: 1,
+                padding: 12,
+                cornerRadius: 8,
+                boxPadding: 4,
+                usePointStyle: true
+            };
+            const chartLegendStyle = {
+                display: true,
+                labels: {
+                    color: '#fff',
+                    font: { size: 12, weight: '600', family: "'Poppins', sans-serif" },
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    boxWidth: 8,
+                    padding: 20
+                }
+            };
 
             document.addEventListener('DOMContentLoaded', function () {
 
@@ -717,10 +942,30 @@
                             data: {
                                 labels: multiLineLabels,
                                 datasets: [
-                                    { label: 'Mobil', data: data.datasets.mobil, backgroundColor: '#00E5FF', barThickness: 40 },
-                                    { label: 'Motor', data: data.datasets.motor, backgroundColor: '#FFD600', barThickness: 40 },
-                                    { label: 'Bus', data: data.datasets.bus, backgroundColor: '#00C853', barThickness: 40 },
-                                    { label: 'Truk', data: data.datasets.truk, backgroundColor: '#FF5252', barThickness: 40 }
+                                    {
+                                        label: 'Mobil', data: data.datasets.mobil, barThickness: 40,
+                                        backgroundColor: (c) => barGradient(c, '#4DE8FF', 'rgba(0,184,212,0.15)'),
+                                        borderColor: '#00B8D4', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#00E5FF'
+                                    },
+                                    {
+                                        label: 'Motor', data: data.datasets.motor, barThickness: 40,
+                                        backgroundColor: (c) => barGradient(c, '#FFE45E', 'rgba(255,196,0,0.15)'),
+                                        borderColor: '#FFC400', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#FFD600'
+                                    },
+                                    {
+                                        label: 'Bus', data: data.datasets.bus, barThickness: 40,
+                                        backgroundColor: (c) => barGradient(c, '#5CF3B2', 'rgba(0,168,107,0.15)'),
+                                        borderColor: '#00A86B', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#00E676'
+                                    },
+                                    {
+                                        label: 'Truk', data: data.datasets.truk, barThickness: 40,
+                                        backgroundColor: (c) => barGradient(c, '#FF7A70', 'rgba(229,57,53,0.15)'),
+                                        borderColor: '#E53935', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#FF5252'
+                                    }
                                 ]
                             },
                             options: {
@@ -741,13 +986,39 @@
                                     }
                                 },
                                 plugins: {
-                                    legend: { display: true, labels: { color: '#fff' } }
+                                    legend: chartLegendStyle,
+                                    tooltip: chartTooltipStyle
                                 }
                             }
                         });
                     })
                     .catch(err => console.error("Gagal load grafik user:", err));
             }
+
+            // Plugin: teks total kendaraan di tengah doughnut
+            const doughnutCenterText = {
+                id: 'doughnutCenterText',
+                afterDraw(chart) {
+                    if (chart.config.type !== 'doughnut') return;
+                    const { ctx } = chart;
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta.data.length) return;
+                    const raw = chart.data.datasets[0].data;
+                    const total = raw.reduce((a, b) => (Number(a) || 0) + (Number(b) || 0), 0);
+                    const x = (chart.chartArea.left + chart.chartArea.right) / 2;
+                    const y = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = total > 0 ? '#fff' : '#555';
+                    ctx.font = '700 26px Poppins, sans-serif';
+                    ctx.fillText(total > 0 ? total.toLocaleString('id-ID') : '0', x, y - 8);
+                    ctx.fillStyle = '#888';
+                    ctx.font = '11px Poppins, sans-serif';
+                    ctx.fillText('KENDARAAN', x, y + 16);
+                    ctx.restore();
+                }
+            };
 
             function fetchVehicleChart(id, period) {
                 let url = `/api/public/vehicle_distribution?cctv_id=${id}&period=${period}`;
@@ -765,11 +1036,39 @@
                                 labels: data.labels,
                                 datasets: [{
                                     data: hasData ? data.data : [1],
-                                    backgroundColor: hasData ? ['#00E5FF', '#FFD600', '#00C853', '#FF5252'] : ['#333'],
-                                    borderWidth: 0
+                                    backgroundColor: hasData ? ['#4DE8FF', '#FFE45E', '#5CF3B2', '#FF7A70'] : ['#333'],
+                                    borderWidth: 0,
+                                    hoverOffset: 10,
+                                    borderColor: '#1e1e1e',
+                                    borderWidth: 3
                                 }]
                             },
-                            options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                cutout: '72%',
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(15,15,15,0.95)',
+                                        titleColor: '#fff',
+                                        bodyColor: '#e0e0e0',
+                                        borderColor: 'rgba(0,229,255,0.35)',
+                                        borderWidth: 1,
+                                        padding: 12,
+                                        cornerRadius: 8,
+                                        boxPadding: 4,
+                                        usePointStyle: true
+                                    }
+                                },
+                                animation: {
+                                    animateRotate: true,
+                                    animateScale: true,
+                                    duration: 1200,
+                                    easing: 'easeOutQuart'
+                                }
+                            },
+                            plugins: [doughnutCenterText]
                         });
 
                         // Update Legend Persentase
@@ -905,18 +1204,39 @@
                             data: {
                                 labels: simplifiedLabels,
                                 datasets: [
-                                    { label: 'Mobil', data: data.datasets.mobil, backgroundColor: '#00E5FF', barThickness: barThickness },
-                                    { label: 'Motor', data: data.datasets.motor, backgroundColor: '#FFD600', barThickness: barThickness },
-                                    { label: 'Bus', data: data.datasets.bus, backgroundColor: '#00C853', barThickness: barThickness },
-                                    { label: 'Truk', data: data.datasets.truk, backgroundColor: '#FF5252', barThickness: barThickness }
+                                    {
+                                        label: 'Mobil', data: data.datasets.mobil, barThickness: barThickness,
+                                        backgroundColor: (c) => barGradient(c, '#4DE8FF', 'rgba(0,184,212,0.15)'),
+                                        borderColor: '#00B8D4', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#00E5FF'
+                                    },
+                                    {
+                                        label: 'Motor', data: data.datasets.motor, barThickness: barThickness,
+                                        backgroundColor: (c) => barGradient(c, '#FFE45E', 'rgba(255,196,0,0.15)'),
+                                        borderColor: '#FFC400', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#FFD600'
+                                    },
+                                    {
+                                        label: 'Bus', data: data.datasets.bus, barThickness: barThickness,
+                                        backgroundColor: (c) => barGradient(c, '#5CF3B2', 'rgba(0,168,107,0.15)'),
+                                        borderColor: '#00A86B', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#00E676'
+                                    },
+                                    {
+                                        label: 'Truk', data: data.datasets.truk, barThickness: barThickness,
+                                        backgroundColor: (c) => barGradient(c, '#FF7A70', 'rgba(229,57,53,0.15)'),
+                                        borderColor: '#E53935', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#FF5252'
+                                    }
                                 ]
                             },
                             options: {
                                 responsive: true,
                                 maintainAspectRatio: false,
                                 plugins: {
-                                    legend: { display: true, labels: { color: '#fff' } },
+                                    legend: chartLegendStyle,
                                     tooltip: {
+                                        ...chartTooltipStyle,
                                         callbacks: {
                                             label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}`,
                                             footer: (items) => `TOTAL: ${items.reduce((a, b) => a + b.raw, 0).toLocaleString()}`

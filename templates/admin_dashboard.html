@@ -8,6 +8,7 @@
 
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/icons.css') }}">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Google Fonts -->
@@ -85,6 +86,18 @@
             margin-bottom: 15px;
             width: 48px;
             height: 48px;
+        }
+
+        .summary-chip {
+            width: 58px;
+            height: 58px;
+            border-radius: 18px;
+            margin-bottom: 15px;
+        }
+
+        .summary-chip .lucide {
+            width: 28px;
+            height: 28px;
         }
 
         .summary-card .value {
@@ -324,12 +337,21 @@
             color: var(--accent-cyan);
         }
 
+        .legend-item {
+            transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+        }
+
+        .legend-item:hover {
+            transform: translateX(4px);
+        }
+
         .legend-color {
             width: 12px;
             height: 12px;
-            border-radius: 50%;
+            border-radius: 5px;
             margin-right: 8px;
             display: inline-block;
+            vertical-align: middle;
         }
 
         .camera-item {
@@ -381,7 +403,7 @@
         }
 
         .server-status-card {
-            background: linear-gradient(135deg, #1e1e1e 0%, #252525 100%);
+            background: linear-gradient(145deg, #1e1e1e 0%, #252525 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -391,36 +413,272 @@
             overflow: hidden;
         }
 
+        .server-status-card::before {
+            content: "";
+            position: absolute;
+            top: -60%;
+            left: -40%;
+            width: 180%;
+            height: 180%;
+            background: radial-gradient(circle at 30% 20%, rgba(0, 229, 255, 0.09), transparent 55%);
+            animation: statusGlow 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes statusGlow {
+            0%, 100% { opacity: 0.6; transform: translateY(0); }
+            50% { opacity: 1; transform: translateY(-12px); }
+        }
+
+        .status-pulse-wrap {
+            position: relative;
+            display: inline-flex;
+        }
+
         .status-indicator {
-            width: 15px;
-            height: 15px;
+            width: 18px;
+            height: 18px;
             background-color: #00C853;
             border-radius: 50%;
             box-shadow: 0 0 15px #00C853;
-            margin-bottom: 15px;
-            animation: pulse 2s infinite;
+            animation: pulse-fast 0.9s infinite;
+            transition: background-color 0.5s ease, box-shadow 0.5s ease;
+        }
+
+        .status-indicator.offline {
+            background-color: #ff5252;
+            box-shadow: 0 0 15px #ff5252;
         }
 
         .status-bar-container {
             width: 80%;
-            height: 6px;
+            height: 8px;
             background-color: #333;
             border-radius: 10px;
-            margin-top: 15px;
             overflow: hidden;
+            box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
         }
 
         .status-bar-fill {
             height: 100%;
-            width: 92%;
-            background-color: #00C853;
+            width: 99%;
+            background: linear-gradient(90deg, #00E676, #00C853);
             border-radius: 10px;
+            position: relative;
+            transition: width 1s ease, background 0.6s ease;
+        }
+
+        .status-bar-fill::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+            transform: translateX(-100%);
+            animation: statusSheen 2.5s infinite;
+        }
+
+        @keyframes statusSheen {
+            0% { transform: translateX(-100%); }
+            60%, 100% { transform: translateX(100%); }
+        }
+
+        /* --- SINYAL CCTV --- */
+        .cctv-signal-list {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            padding: 12px 14px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+        }
+
+        .cctv-signal-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .cctv-signal-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .cctv-signal-dot.online {
+            background: #00E676;
+            box-shadow: 0 0 6px #00E676;
+        }
+
+        .cctv-signal-dot.offline {
+            background: #ff5252;
+            box-shadow: 0 0 6px #ff5252;
+        }
+
+        .cctv-signal-name {
+            color: #e0e0e0;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+            flex: 0 1 auto;
+        }
+
+        .cctv-signal-bar {
+            flex: 1;
+            height: 5px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            min-width: 20px;
+        }
+
+        .cctv-signal-fill {
+            display: block;
+            height: 100%;
+            border-radius: 5px;
+            transition: width 1s ease;
+        }
+
+        .cctv-signal-fill.online {
+            background: linear-gradient(90deg, #00E676, #00C853);
+        }
+
+        .cctv-signal-fill.offline {
+            background: linear-gradient(90deg, #ff5252, #e53935);
+        }
+
+        .cctv-signal-value {
+            color: #00E676;
+            font-weight: 600;
+            min-width: 42px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+
+        .cctv-signal-value.offline-text {
+            color: #ff5252;
+        }
+
+        /* --- META SERVER (Jam/Uptime/Stabilitas) --- */
+        .server-meta {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 10px 16px;
+        }
+
+        .server-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 12.5px;
+        }
+
+        .server-meta-label {
+            color: #9aa0a6;
+        }
+
+        .server-meta-value {
+            color: #ffffff;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .last-update-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 229, 255, 0.08);
+            border: 1px solid rgba(0, 229, 255, 0.22);
+            color: #b8e6ff;
+            padding: 5px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+        }
+
+        .last-update-badge span {
+            color: #00E5FF;
+            font-weight: 600;
         }
 
         .modal-content {
             background-color: var(--bg-card);
             border: 1px solid var(--border-color);
             color: white;
+        }
+
+        /* ===== PERBAIKAN KETERBACAAN KOLOM CRUD KAMERA ===== */
+        .camera-item {
+            background-color: #1f1f1f;
+            border: 1px solid #3a3a3a;
+        }
+        .camera-name {
+            color: #ffffff;
+        }
+        .camera-loc {
+            color: #cfcfcf;
+        }
+        .camera-loc i {
+            color: var(--accent-cyan);
+        }
+
+        .btn-edit-camera {
+            background-color: rgba(0, 229, 255, 0.12);
+            color: #00E5FF;
+            border: 1px solid rgba(0, 229, 255, 0.5);
+        }
+        .btn-edit-camera:hover {
+            background-color: #00E5FF;
+            color: #000;
+        }
+        .btn-delete-camera {
+            background-color: rgba(255, 82, 82, 0.12);
+            color: #ff5252;
+            border: 1px solid rgba(255, 82, 82, 0.5);
+        }
+        .btn-delete-camera:hover {
+            background-color: #ff5252;
+            color: #fff;
+        }
+
+        /* Form dalam modal kamera - teks jelas */
+        #addCameraModal .form-label {
+            color: #e0e0e0;
+            font-weight: 600;
+        }
+        #addCameraModal .form-control,
+        #addCameraModal .form-select {
+            background-color: #1f1f1f;
+            border: 1px solid #555;
+            color: #ffffff;
+        }
+        #addCameraModal .form-control::placeholder {
+            color: #9aa0a6;
+        }
+        #addCameraModal .form-select option {
+            background-color: #1f1f1f;
+            color: #ffffff;
+        }
+        #addCameraModal .form-control:focus,
+        #addCameraModal .form-select:focus {
+            background-color: #1f1f1f;
+            color: #ffffff;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.2);
+        }
+        #addCameraModal .modal-title {
+            color: var(--accent-cyan);
+        }
+
+        /* Placeholder input pencarian kamera */
+        #cameraSearchInput::placeholder {
+            color: #9aa0a6;
         }
 
         /* Animasi Denyut Cepat */
@@ -439,15 +697,6 @@
                 transform: scale(0.95);
                 box-shadow: 0 0 0 0 rgba(0, 200, 83, 0);
             }
-        }
-
-        .status-indicator {
-            width: 15px;
-            height: 15px;
-            background-color: #00C853;
-            border-radius: 50%;
-            /* Gunakan animasi pulse-fast dengan durasi 0.8s agar cepat */
-            animation: pulse-fast 0.8s infinite;
         }
 
         /* Pastikan kolom row memiliki tinggi yang sama */
@@ -477,6 +726,48 @@
             height: 350px !important;
             /* Tambahkan tinggi agar teks di bawah tanggal muat */
         }
+
+        /* ====== ANIMATIONS & ENHANCEMENTS ====== */
+        html { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #121212; }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00E5FF, #00B8D4);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #00B8D4, #0091A9);
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #fff, #00E5FF, #00B8D4, #fff);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 6s ease infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .dashboard-card {
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(0, 229, 255, 0.4);
+            box-shadow: 0 12px 40px rgba(0, 229, 255, 0.1);
+        }
     </style>
 </head>
 
@@ -495,32 +786,40 @@
     <div class="container mt-4">
 
         <!-- BAGIAN 1: RINGKASAN LALU LINTAS -->
-        <h4 class="mb-3 fw-bold text-white text-center">Ringkasan Lalu Lintas</h4>
+        <h4 class="mb-3 fw-bold text-white text-center gradient-text">Ringkasan Lalu Lintas</h4>
         <div class="row g-4 mb-5 justify-content-center">
-            <div class="col-md-3 col-sm-6">
+            <div class="col-md-3 col-sm-6 reveal">
                 <div class="summary-card">
-                    <i data-lucide="car" class="icon" style="color: white;"></i>
+                    <div class="icon-chip summary-chip" style="--chip:#00E5FF;">
+                        <i data-lucide="car"></i>
+                    </div>
                     <div class="value" id="kendaraanHariIni">-</div>
                     <div class="label">Total Kendaraan</div>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6">
+            <div class="col-md-3 col-sm-6 reveal">
                 <div class="summary-card">
-                    <i data-lucide="activity" class="icon" style="color: var(--accent-yellow);"></i>
+                    <div class="icon-chip summary-chip" style="--chip:#FFD600;">
+                        <i data-lucide="activity"></i>
+                    </div>
                     <div class="value" id="kepadatanTertinggi">-</div>
                     <div class="label">Kepadatan</div>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6">
+            <div class="col-md-3 col-sm-6 reveal">
                 <div class="summary-card">
-                    <i data-lucide="gauge" class="icon" style="color: var(--accent-cyan);"></i>
+                    <div class="icon-chip summary-chip" style="--chip:#00E5FF;">
+                        <i data-lucide="gauge"></i>
+                    </div>
                     <div class="value" id="rataRataKecepatan">-</div>
                     <div class="label">Rata-rata Kecepatan</div>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6">
+            <div class="col-md-3 col-sm-6 reveal">
                 <div class="summary-card">
-                    <i data-lucide="camera" class="icon" style="color: #FF5252;"></i>
+                    <div class="icon-chip summary-chip" style="--chip:#FF5252;">
+                        <i data-lucide="camera"></i>
+                    </div>
                     <div class="value" id="kameraAktif">-</div>
                     <div class="label">Kamera Aktif</div>
                 </div>
@@ -530,7 +829,7 @@
         <!-- BAGIAN 2: LIVE FEED & ARTIKEL -->
         <div class="row g-4 mb-5">
             <!-- Live Feed Player -->
-            <div class="col-lg-8">
+            <div class="col-lg-8 reveal">
                 <div class="dashboard-card">
                     <div class="card-header-custom">
                         <div class="d-flex align-items-center gap-3">
@@ -586,12 +885,12 @@
             </div>
 
             <!-- Artikel Terbaru -->
-            <div class="col-lg-4">
+            <div class="col-lg-4 reveal">
                 <div class="dashboard-card">
                     <div class="card-header-custom">
                         <h4>Artikel Terbaru</h4>
                         <a href="{{ url_for('kelola_artikel') }}"
-                            class="btn btn-sm btn-outline-secondary rounded-pill">Kelola</a>
+                            class="btn btn-sm btn-info rounded-pill">Kelola</a>
                     </div>
                     <div>
                         {% for article in latest_articles %}
@@ -614,8 +913,8 @@
         </div>
 
         <!-- BAGIAN 3: STATISTIK & ANALITIK -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="fw-bold text-white mb-0">Statistik & Analitik</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3 reveal">
+            <h4 class="fw-bold text-white mb-0 gradient-text">Statistik & Analitik</h4>
             <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 250px;"
                 id="chartCctvSelect">
                 <option value="">Semua Data CCTV</option>
@@ -624,7 +923,7 @@
 
         <div class="row g-4 mb-5">
             <!-- KIRI: Laporan Data Kendaraan (Tinggi dikunci 850px) -->
-            <div class="col-lg-7">
+            <div class="col-lg-7 reveal">
                 <div class="dashboard-card"
                     style="height: 850px; display: flex; flex-direction: column; overflow: hidden;">
                     <div class="card-header-custom">
@@ -650,7 +949,7 @@
             </div>
 
             <!-- KANAN: Distribusi Kendaraan (Tinggi dikunci 850px) -->
-            <div class="col-lg-5">
+            <div class="col-lg-5 reveal">
                 <div class="dashboard-card"
                     style="height: 850px; display: flex; flex-direction: column; overflow: hidden;">
                     <div class="card-header-custom">
@@ -672,7 +971,7 @@
                                 style="background: rgba(255,255,255,0.02); border-radius: 8px;">
                                 <div class="d-flex align-items-center">
                                     <span class="legend-color"
-                                        style="background: #00E5FF; width:14px; height:14px; display:inline-block; border-radius:50%; margin-right:12px;"></span>
+                                        style="background: linear-gradient(135deg, #4DE8FF, #00B8D4); width:14px; height:14px; display:inline-block; border-radius:5px; margin-right:12px; box-shadow:0 0 8px rgba(0,229,255,0.4);"></span>
                                     <span style="font-size: 1rem;">Mobil</span>
                                 </div>
                                 <span class="fw-bold text-info fs-5" id="val-mobil">0%</span>
@@ -681,7 +980,7 @@
                                 style="background: rgba(255,255,255,0.02); border-radius: 8px;">
                                 <div class="d-flex align-items-center">
                                     <span class="legend-color"
-                                        style="background: #FFD600; width:14px; height:14px; display:inline-block; border-radius:50%; margin-right:12px;"></span>
+                                        style="background: linear-gradient(135deg, #FFE45E, #FFC400); width:14px; height:14px; display:inline-block; border-radius:5px; margin-right:12px; box-shadow:0 0 8px rgba(255,196,0,0.4);"></span>
                                     <span style="font-size: 1rem;">Motor</span>
                                 </div>
                                 <span class="fw-bold text-info fs-5" id="val-motor">0%</span>
@@ -690,7 +989,7 @@
                                 style="background: rgba(255,255,255,0.02); border-radius: 8px;">
                                 <div class="d-flex align-items-center">
                                     <span class="legend-color"
-                                        style="background: #00C853; width:14px; height:14px; display:inline-block; border-radius:50%; margin-right:12px;"></span>
+                                        style="background: linear-gradient(135deg, #5CF3B2, #00A86B); width:14px; height:14px; display:inline-block; border-radius:5px; margin-right:12px; box-shadow:0 0 8px rgba(0,230,118,0.4);"></span>
                                     <span style="font-size: 1rem;">Bus</span>
                                 </div>
                                 <span class="fw-bold text-info fs-5" id="val-bus">0%</span>
@@ -699,7 +998,7 @@
                                 style="background: rgba(255,255,255,0.02); border-radius: 8px;">
                                 <div class="d-flex align-items-center">
                                     <span class="legend-color"
-                                        style="background: #FF5252; width:14px; height:14px; display:inline-block; border-radius:50%; margin-right:12px;"></span>
+                                        style="background: linear-gradient(135deg, #FF7A70, #E53935); width:14px; height:14px; display:inline-block; border-radius:5px; margin-right:12px; box-shadow:0 0 8px rgba(255,82,82,0.4);"></span>
                                     <span style="font-size: 1rem;">Truk</span>
                                 </div>
                                 <span class="fw-bold text-info fs-5" id="val-truk">0%</span>
@@ -752,7 +1051,7 @@
                                 class="form-control rounded-pill bg-dark border-secondary text-white"
                                 placeholder="Cari kamera berdasarkan nama..." style="max-width: 300px;">
                         </div>
-                        <button class="btn-add-camera" data-bs-toggle="modal" data-bs-target="#addCameraModal">
+                        <button class="btn-add-camera" onclick="openAddModal()">
                             <i data-lucide="plus" size="18" class="me-1"></i> Tambah
                         </button>
                     </div>
@@ -764,16 +1063,17 @@
                             <div class="camera-thumb me-3 text-info"><i data-lucide="video"></i></div>
                             <div class="camera-info">
                                 <p class="camera-name mb-0 fw-bold">{{ cctv.name }}</p>
-                                <p class="camera-loc mb-0 text-muted small"><i data-lucide="map-pin" size="12"></i> ID:
-                                    {{ cctv.id }} • Aktif</p>
+                                <p class="camera-loc mb-0 small"><i data-lucide="map-pin" size="12"></i> ID:
+                                    {{ cctv.id }} • {{ cctv.status }}
+                                    {% if cctv.lat is not none %} • {{ "%.4f"|format(cctv.lat) }}, {{ "%.4f"|format(cctv.lon) }}{% endif %}</p>
                             </div>
                             <div class="camera-actions ms-auto d-flex gap-2">
-                                <button class="btn btn-sm btn-outline-info border-0"
-                                    onclick="openEditModal('{{ cctv.name }}', '{{ cctv.url }}')">
+                                <button class="btn btn-sm btn-edit-camera"
+                                    onclick='openEditModal({{ cctv | tojson }})'>
                                     <i data-lucide="pencil" size="18"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger border-0"
-                                    onclick="confirmDelete('{{ cctv.name }}')">
+                                <button class="btn btn-sm btn-delete-camera"
+                                    onclick='confirmDelete({{ cctv.id }}, {{ cctv.name | tojson }})'>
                                     <i data-lucide="trash-2" size="18"></i>
                                 </button>
                             </div>
@@ -789,23 +1089,37 @@
                 <!-- Tambahkan d-flex dan justify-content-center agar konten berada di tengah secara vertikal -->
                 <div
                     class="dashboard-card server-status-card h-100 d-flex flex-column align-items-center justify-content-center">
-                    <div id="serverIndicator" class="status-indicator mb-3"></div>
+                    <div class="status-pulse-wrap mb-3"><span id="serverIndicator" class="status-indicator"></span></div>
                     <h5 class="text-white fw-bold mb-1">Server Status</h5>
-                    <p id="serverStatusText" class="text-success fw-bold mb-3" style="letter-spacing: 1px;">ONLINE •
+                    <p id="serverStatusText" class="fw-bold mb-3" style="letter-spacing: 1px; color: #00E676;">ONLINE •
                         STABIL</p>
 
-                    <div class="d-flex justify-content-between w-75 text-muted small mb-2">
-                        <span>Uptime</span>
-                        <span id="serverUptime">0h 0m</span>
+                    <div class="status-bar-container mb-3">
+                        <div id="stabilityBar" class="status-bar-fill"></div>
                     </div>
 
-                    <div class="status-bar-container mb-3"
-                        style="width: 80%; background: #333; height: 8px; border-radius: 10px; overflow: hidden;">
-                        <div id="stabilityBar" class="status-bar-fill"
-                            style="width: 99%; background: #00C853; height: 100%;"></div>
+                    <!-- SINYAL 5 CCTV -->
+                    <div class="cctv-signal-list w-100 mb-3" id="cctvSignalList">
+                        <div class="text-muted small text-center py-2">Memuat sinyal CCTV...</div>
                     </div>
 
-                    <p class="text-muted small">
+                    <div class="server-meta w-100 mb-3">
+                        <div class="server-meta-row">
+                            <span class="server-meta-label">Jam Server</span>
+                            <span class="server-meta-value" id="serverClock">--:--:--</span>
+                        </div>
+                        <div class="server-meta-row">
+                            <span class="server-meta-label">Uptime</span>
+                            <span class="server-meta-value" id="serverUptime">0h 0m</span>
+                        </div>
+                        <div class="server-meta-row">
+                            <span class="server-meta-label">Stabilitas</span>
+                            <span class="server-meta-value" id="serverStabilityText">99.5%</span>
+                        </div>
+                    </div>
+
+                    <p class="last-update-badge mb-0">
+                        <i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i>
                         Terakhir diperbarui: <span id="lastServerUpdate">Baru saja</span>
                     </p>
                 </div>
@@ -821,14 +1135,32 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <form>
+                        <form id="cameraForm">
+                            <input type="hidden" id="cameraId">
                             <div class="mb-3">
-                                <label class="form-label text-muted small">Nama Kamera</label>
-                                <input type="text" class="form-control" placeholder="Contoh: CCTV Simpang Lima">
+                                <label class="form-label small">Nama Kamera</label>
+                                <input type="text" id="cameraName" class="form-control" placeholder="Contoh: CCTV Simpang Lima" required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-muted small">URL Stream</label>
-                                <input type="text" class="form-control" placeholder="https://...">
+                                <label class="form-label small">URL Stream (YouTube)</label>
+                                <input type="text" id="cameraUrl" class="form-control" placeholder="https://www.youtube.com/watch?v=..." required>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-6 mb-1">
+                                    <label class="form-label small">Latitude</label>
+                                    <input type="text" id="cameraLat" class="form-control" placeholder="Contoh: -6.9005">
+                                </div>
+                                <div class="col-6 mb-1">
+                                    <label class="form-label small">Longitude</label>
+                                    <input type="text" id="cameraLon" class="form-control" placeholder="Contoh: 110.6308">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">Status</label>
+                                <select id="cameraStatus" class="form-select">
+                                    <option value="Aktif">Aktif</option>
+                                    <option value="Nonaktif">Nonaktif</option>
+                                </select>
                             </div>
                             <button type="submit" class="btn btn-info w-100 fw-bold">Simpan Data</button>
                         </form>
@@ -844,6 +1176,17 @@
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
+
+            // --- SCROLL REVEAL ---
+            const revealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        revealObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12 });
+            document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
             // --- BAGIAN ANALITIK KOMENTAR ADMIN (SINKRON FIREBASE) ---
             let commentChartInstance = null;
@@ -884,18 +1227,24 @@
                                     {
                                         label: 'Puas (Baik)',
                                         data: baikData,
-                                        backgroundColor: '#00E5FF',
-                                        borderRadius: 5,
+                                        backgroundColor: (c) => barGradient(c, '#4DE8FF', 'rgba(0,184,212,0.15)'),
+                                        borderColor: '#00B8D4',
+                                        borderWidth: 1.5,
+                                        borderRadius: 8,
                                         barPercentage: 0.6,
-                                        categoryPercentage: 0.5
+                                        categoryPercentage: 0.5,
+                                        hoverBackgroundColor: '#00E5FF'
                                     },
                                     {
                                         label: 'Laporan (Buruk)',
                                         data: burukData,
-                                        backgroundColor: '#FF5252',
-                                        borderRadius: 5,
+                                        backgroundColor: (c) => barGradient(c, '#FF7A70', 'rgba(229,57,53,0.15)'),
+                                        borderColor: '#E53935',
+                                        borderWidth: 1.5,
+                                        borderRadius: 8,
                                         barPercentage: 0.6,
-                                        categoryPercentage: 0.5
+                                        categoryPercentage: 0.5,
+                                        hoverBackgroundColor: '#FF5252'
                                     }
                                 ]
                             },
@@ -922,11 +1271,8 @@
                                     }
                                 },
                                 plugins: {
-                                    legend: {
-                                        display: true,
-                                        position: 'top',
-                                        labels: { color: '#888', font: { size: 10 } }
-                                    }
+                                    legend: chartLegendStyle,
+                                    tooltip: chartTooltipStyle
                                 }
                             }
                         });
@@ -976,6 +1322,64 @@
             let vehiclePeriod = 'harian';
             let trafficChartInstance = null;
             let vehicleChartInstance = null;
+
+            // --- HELPER GRADIENT GRAFIK & STYLE ---
+            function barGradient(context, topColor, bottomColor) {
+                const { ctx, chartArea } = context.chart;
+                if (!chartArea) return topColor;
+                const g = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                g.addColorStop(0, bottomColor);
+                g.addColorStop(1, topColor);
+                return g;
+            }
+
+            const chartTooltipStyle = {
+                backgroundColor: 'rgba(15,15,15,0.95)',
+                titleColor: '#fff',
+                bodyColor: '#e0e0e0',
+                borderColor: 'rgba(0,229,255,0.35)',
+                borderWidth: 1,
+                padding: 12,
+                cornerRadius: 8,
+                boxPadding: 4,
+                usePointStyle: true
+            };
+            const chartLegendStyle = {
+                display: true,
+                labels: {
+                    color: '#fff',
+                    font: { size: 12, weight: '600', family: "'Poppins', sans-serif" },
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    boxWidth: 8,
+                    padding: 20
+                }
+            };
+
+            // Plugin: teks total kendaraan di tengah doughnut
+            const doughnutCenterText = {
+                id: 'doughnutCenterText',
+                afterDraw(chart) {
+                    if (chart.config.type !== 'doughnut') return;
+                    const { ctx } = chart;
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta.data.length) return;
+                    const raw = chart.data.datasets[0].data;
+                    const total = raw.reduce((a, b) => (Number(a) || 0) + (Number(b) || 0), 0);
+                    const x = (chart.chartArea.left + chart.chartArea.right) / 2;
+                    const y = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = total > 0 ? '#fff' : '#555';
+                    ctx.font = '700 26px Poppins, sans-serif';
+                    ctx.fillText(total > 0 ? total.toLocaleString('id-ID') : '0', x, y - 8);
+                    ctx.fillStyle = '#888';
+                    ctx.font = '11px Poppins, sans-serif';
+                    ctx.fillText('KENDARAAN', x, y + 16);
+                    ctx.restore();
+                }
+            };
 
             document.addEventListener('DOMContentLoaded', function () {
                 const rawData = document.getElementById('cctv-data').textContent;
@@ -1262,17 +1666,38 @@
                             data: {
                                 labels: multiLineLabels,
                                 datasets: [
-                                    { label: 'Mobil', data: data.datasets.mobil, backgroundColor: '#00E5FF', barThickness: 40 },
-                                    { label: 'Motor', data: data.datasets.motor, backgroundColor: '#FFD600', barThickness: 40 },
-                                    { label: 'Bus', data: data.datasets.bus, backgroundColor: '#00C853', barThickness: 40 },
-                                    { label: 'Truk', data: data.datasets.truk, backgroundColor: '#FF5252', barThickness: 40 }
+                                    {
+                                        label: 'Mobil', data: data.datasets.mobil, barThickness: 40,
+                                        backgroundColor: (c) => barGradient(c, '#4DE8FF', 'rgba(0,184,212,0.15)'),
+                                        borderColor: '#00B8D4', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#00E5FF'
+                                    },
+                                    {
+                                        label: 'Motor', data: data.datasets.motor, barThickness: 40,
+                                        backgroundColor: (c) => barGradient(c, '#FFE45E', 'rgba(255,196,0,0.15)'),
+                                        borderColor: '#FFC400', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#FFD600'
+                                    },
+                                    {
+                                        label: 'Bus', data: data.datasets.bus, barThickness: 40,
+                                        backgroundColor: (c) => barGradient(c, '#5CF3B2', 'rgba(0,168,107,0.15)'),
+                                        borderColor: '#00A86B', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#00E676'
+                                    },
+                                    {
+                                        label: 'Truk', data: data.datasets.truk, barThickness: 40,
+                                        backgroundColor: (c) => barGradient(c, '#FF7A70', 'rgba(229,57,53,0.15)'),
+                                        borderColor: '#E53935', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#FF5252'
+                                    }
                                 ]
                             },
                             options: {
                                 responsive: true,
                                 maintainAspectRatio: false, // Penting agar mengikuti tinggi container div
                                 plugins: {
-                                    legend: { display: true, labels: { color: '#fff', font: { size: 12 } } }
+                                    legend: chartLegendStyle,
+                                    tooltip: chartTooltipStyle
                                 },
                                 scales: {
                                     x: {
@@ -1325,8 +1750,10 @@
                                 labels: data.labels, // ['Mobil', 'Motor', 'Bus', 'Truk']
                                 datasets: [{
                                     data: data.data, // Angka jumlah kendaraan asli
-                                    backgroundColor: ['#00E5FF', '#FFD600', '#00C853', '#FF5252'],
-                                    borderWidth: 0,
+                                    backgroundColor: ['#4DE8FF', '#FFE45E', '#5CF3B2', '#FF7A70'],
+                                    borderColor: '#1e1e1e',
+                                    borderWidth: 3,
+                                    hoverOffset: 10,
                                 }]
                             },
                             options: {
@@ -1335,9 +1762,26 @@
                                 cutout: '70%',
                                 plugins: {
                                     legend: { display: false },
-                                    tooltip: { enabled: true }
+                                    tooltip: {
+                                        backgroundColor: 'rgba(15,15,15,0.95)',
+                                        titleColor: '#fff',
+                                        bodyColor: '#e0e0e0',
+                                        borderColor: 'rgba(0,229,255,0.35)',
+                                        borderWidth: 1,
+                                        padding: 12,
+                                        cornerRadius: 8,
+                                        boxPadding: 4,
+                                        usePointStyle: true
+                                    }
+                                },
+                                animation: {
+                                    animateRotate: true,
+                                    animateScale: true,
+                                    duration: 1200,
+                                    easing: 'easeOutQuart'
                                 }
-                            }
+                            },
+                            plugins: [doughnutCenterText]
                         });
 
                         // 3. UPDATE TEKS PERSENTASE (LEGEND) DI SEBELAH KANAN
@@ -1355,70 +1799,185 @@
                     .catch(err => console.error("Gagal update grafik distribusi:", err));
             }
 
-            // --- CRUD UI Functions ---
+            // --- CRUD FUNGSIONAL (Tambah/Edit/Hapus Kamera via API) ---
 
-            // 1. FUNGSI PENCARIAN (TAMBAHKAN INI)
+            // 1. FUNGSI PENCARIAN
             document.getElementById('cameraSearchInput').addEventListener('input', function () {
-                const keyword = this.value.toLowerCase(); // Ambil kata kunci dan ubah ke huruf kecil
-                const cameraItems = document.querySelectorAll('.camera-item'); // Ambil semua baris kamera
+                const keyword = this.value.toLowerCase();
+                const cameraItems = document.querySelectorAll('.camera-item');
 
                 cameraItems.forEach(item => {
-                    // Ambil teks Nama dan Info (ID/Lokasi) dari baris tersebut
                     const name = item.querySelector('.camera-name').innerText.toLowerCase();
                     const info = item.querySelector('.camera-loc').innerText.toLowerCase();
 
-                    // Jika keyword ditemukan di Nama atau Info
                     if (name.includes(keyword) || info.includes(keyword)) {
-                        item.style.setProperty('display', 'flex', 'important'); // Tampilkan
+                        item.style.setProperty('display', 'flex', 'important');
                     } else {
-                        item.style.setProperty('display', 'none', 'important'); // Sembunyikan
+                        item.style.setProperty('display', 'none', 'important');
                     }
                 });
             });
 
-            // 2. FUNGSI EDIT MODAL
-            function openEditModal(name, url) {
+            // 2. BUKA MODAL TAMBAH
+            function openAddModal() {
+                document.querySelector('#addCameraModal .modal-title').innerText = "Tambah Kamera";
+                document.getElementById('cameraForm').reset();
+                document.getElementById('cameraId').value = '';
+                document.getElementById('cameraStatus').value = 'Aktif';
                 const modal = new bootstrap.Modal(document.getElementById('addCameraModal'));
-                document.querySelector('#addCameraModal .modal-title').innerText = "Edit Kamera";
-
-                // Cari input berdasarkan placeholder atau gunakan ID jika Anda sudah menambahkannya di HTML
-                const nameInput = document.querySelector('#addCameraModal input[placeholder*="CCTV"]');
-                const urlInput = document.querySelector('#addCameraModal input[placeholder*="https"]');
-
-                if (nameInput) nameInput.value = name;
-                if (urlInput) urlInput.value = url;
-
                 modal.show();
             }
 
-            // 3. FUNGSI HAPUS
-            function confirmDelete(name) {
+            // 3. BUKA MODAL EDIT (diisi data kamera)
+            function openEditModal(cctv) {
+                document.querySelector('#addCameraModal .modal-title').innerText = "Edit Kamera";
+                document.getElementById('cameraId').value = cctv.id;
+                document.getElementById('cameraName').value = cctv.name || '';
+                document.getElementById('cameraUrl').value = cctv.url || cctv.youtube_link || '';
+                document.getElementById('cameraLat').value = cctv.lat || '';
+                document.getElementById('cameraLon').value = cctv.lon || '';
+                document.getElementById('cameraStatus').value = cctv.status || 'Aktif';
+                const modal = new bootstrap.Modal(document.getElementById('addCameraModal'));
+                modal.show();
+            }
+
+            // 4. SIMPAN DATA (POST jika baru, PUT jika edit)
+            document.getElementById('cameraForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const id = document.getElementById('cameraId').value;
+                const payload = {
+                    name: document.getElementById('cameraName').value.trim(),
+                    url: document.getElementById('cameraUrl').value.trim(),
+                    lat: document.getElementById('cameraLat').value.trim(),
+                    lon: document.getElementById('cameraLon').value.trim(),
+                    status: document.getElementById('cameraStatus').value,
+                };
+
+                const method = id ? 'PUT' : 'POST';
+                const endpoint = id ? `/api/admin/cameras/${id}` : '/api/admin/cameras';
+
+                const submitBtn = document.querySelector('#cameraForm button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Menyimpan...";
+
+                fetch(endpoint, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        alert(data.message || "Operasi selesai");
+                        if (data.status === 'success') {
+                            bootstrap.Modal.getInstance(document.getElementById('addCameraModal')).hide();
+                            location.reload();
+                        } else {
+                            submitBtn.disabled = false;
+                            submitBtn.innerText = "Simpan Data";
+                        }
+                    })
+                    .catch(err => {
+                        alert("Gagal menyimpan kamera: " + err);
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "Simpan Data";
+                    });
+            });
+
+            // 5. HAPUS KAMERA
+            function confirmDelete(id, name) {
                 if (confirm(`Hapus kamera "${name}"?`)) {
-                    // Logika hapus data (Contoh simulasi)
-                    alert(`Kamera "${name}" berhasil dihapus.`);
-                    // Di sini biasanya Anda akan melakukan fetch('/api/delete_camera/...')
+                    fetch(`/api/admin/cameras/${id}`, { method: 'DELETE' })
+                        .then(res => res.json())
+                        .then(data => {
+                            alert(data.message || "Operasi selesai");
+                            if (data.status === 'success') location.reload();
+                        })
+                        .catch(err => alert("Gagal menghapus kamera: " + err));
                 }
             }
 
-            // --- SERVER STATUS POLLING ---
+            // --- SERVER STATUS REALTIME ---
+            function renderCctvSignals(signals) {
+                const list = document.getElementById('cctvSignalList');
+                if (!list) return;
+                if (!signals || !signals.length) {
+                    list.innerHTML = '<div class="text-muted small text-center py-2">Belum ada data CCTV</div>';
+                    return;
+                }
+                list.innerHTML = signals.map(c => `
+                    <div class="cctv-signal-item">
+                        <span class="cctv-signal-dot ${c.online ? 'online' : 'offline'}"></span>
+                        <span class="cctv-signal-name" title="${c.name}">${c.name}</span>
+                        <span class="cctv-signal-bar">
+                            <span class="cctv-signal-fill ${c.online ? 'online' : 'offline'}"
+                                style="width: ${c.online ? c.signal : 8}%;"></span>
+                        </span>
+                        <span class="cctv-signal-value ${c.online ? '' : 'offline-text'}">
+                            ${c.online ? c.signal + '%' : 'OFF'}
+                        </span>
+                    </div>`).join('');
+            }
+
             function updateServerStatus() {
                 fetch('/api/admin/server_status')
                     .then(res => res.json())
                     .then(data => {
+                        const indicator = document.getElementById('serverIndicator');
+                        const statusText = document.getElementById('serverStatusText');
+                        const stabilityBar = document.getElementById('stabilityBar');
+                        const stabilityText = document.getElementById('serverStabilityText');
+
                         document.getElementById('serverUptime').innerText = data.uptime;
-                        document.getElementById('stabilityBar').style.width = data.stability + "%";
                         document.getElementById('lastServerUpdate').innerText = data.last_update;
+                        renderCctvSignals(data.cctv_signals);
+
+                        const stab = parseFloat(data.stability) || 99;
+                        stabilityBar.style.width = stab + "%";
+                        stabilityText.innerText = stab + "%";
+
+                        if (data.status === "ONLINE") {
+                            indicator.classList.remove('offline');
+                            const color = stab >= 99.5 ? '#00C853' : (stab >= 90 ? '#00E676' : '#FFB300');
+                            indicator.style.backgroundColor = color;
+                            indicator.style.boxShadow = `0 0 15px ${color}`;
+
+                            statusText.innerText = `ONLINE • ${data.status_label || "STABIL"}`;
+                            statusText.style.color = stab >= 90 ? '#00E676' : '#FFC400';
+
+                            stabilityBar.style.background = stab >= 90
+                                ? 'linear-gradient(90deg, #00E676, #00C853)'
+                                : 'linear-gradient(90deg, #FFD600, #FFC400)';
+                        } else {
+                            indicator.classList.add('offline');
+                            statusText.innerText = "OFFLINE • ERROR";
+                            statusText.style.color = '#ff5252';
+                            stabilityBar.style.background = 'linear-gradient(90deg, #ff5252, #e53935)';
+                        }
                     })
                     .catch(err => {
                         const indicator = document.getElementById('serverIndicator');
-                        if (indicator) indicator.style.backgroundColor = "#ff5252";
+                        if (indicator) {
+                            indicator.classList.add('offline');
+                            indicator.style.backgroundColor = "#ff5252";
+                            indicator.style.boxShadow = "0 0 15px #ff5252";
+                        }
                         document.getElementById('serverStatusText').innerText = "OFFLINE • ERROR";
+                        document.getElementById('serverStatusText').style.color = '#ff5252';
                     });
             }
 
-            // Jalankan setiap 10 detik
-            setInterval(updateServerStatus, 10000);
+            // Jam server berjalan real-time (tick setiap detik)
+            function tickServerClock() {
+                const el = document.getElementById('serverClock');
+                if (el) el.innerText = new Date().toLocaleTimeString('id-ID', { hour12: false });
+            }
+
+            // Jalankan setiap 3 detik + langsung saat halaman terbuka
+            setInterval(updateServerStatus, 3000);
             updateServerStatus();
+            setInterval(tickServerClock, 1000);
+            tickServerClock();
 
             function fetchTrafficChart(id, period = 'harian') {
                 let url = `/api/admin/traffic_data?cctv_id=${id}&period=${period}`;
@@ -1456,18 +2015,39 @@
                             data: {
                                 labels: simplifiedLabels,
                                 datasets: [
-                                    { label: 'Mobil', data: data.datasets.mobil, backgroundColor: '#00E5FF', barThickness: barThickness },
-                                    { label: 'Motor', data: data.datasets.motor, backgroundColor: '#FFD600', barThickness: barThickness },
-                                    { label: 'Bus', data: data.datasets.bus, backgroundColor: '#00C853', barThickness: barThickness },
-                                    { label: 'Truk', data: data.datasets.truk, backgroundColor: '#FF5252', barThickness: barThickness }
+                                    {
+                                        label: 'Mobil', data: data.datasets.mobil, barThickness: barThickness,
+                                        backgroundColor: (c) => barGradient(c, '#4DE8FF', 'rgba(0,184,212,0.15)'),
+                                        borderColor: '#00B8D4', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#00E5FF'
+                                    },
+                                    {
+                                        label: 'Motor', data: data.datasets.motor, barThickness: barThickness,
+                                        backgroundColor: (c) => barGradient(c, '#FFE45E', 'rgba(255,196,0,0.15)'),
+                                        borderColor: '#FFC400', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#FFD600'
+                                    },
+                                    {
+                                        label: 'Bus', data: data.datasets.bus, barThickness: barThickness,
+                                        backgroundColor: (c) => barGradient(c, '#5CF3B2', 'rgba(0,168,107,0.15)'),
+                                        borderColor: '#00A86B', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#00E676'
+                                    },
+                                    {
+                                        label: 'Truk', data: data.datasets.truk, barThickness: barThickness,
+                                        backgroundColor: (c) => barGradient(c, '#FF7A70', 'rgba(229,57,53,0.15)'),
+                                        borderColor: '#E53935', borderWidth: 1.5, borderRadius: 8,
+                                        hoverBackgroundColor: '#FF5252'
+                                    }
                                 ]
                             },
                             options: {
                                 responsive: true,
                                 maintainAspectRatio: false,
                                 plugins: {
-                                    legend: { display: true, labels: { color: '#fff', font: { size: 11 } } },
+                                    legend: chartLegendStyle,
                                     tooltip: {
+                                        ...chartTooltipStyle,
                                         callbacks: {
                                             label: (context) => `${context.dataset.label}: ${context.raw.toLocaleString()}`,
                                             footer: (items) => {

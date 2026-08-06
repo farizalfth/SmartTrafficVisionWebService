@@ -8,6 +8,7 @@
 
   <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/icons.css') }}">
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Google Fonts - Poppins -->
@@ -73,6 +74,46 @@
       text-align: center;
     }
 
+    /* KPI Cards */
+    .kpi-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(145deg, #1e1e1e, #252525);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 16px;
+      padding: 16px;
+      height: 100%;
+      transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(0, 229, 255, 0.45);
+      box-shadow: 0 12px 30px rgba(0, 229, 255, 0.12);
+    }
+
+    .kpi-card .icon-chip {
+      flex-shrink: 0;
+    }
+
+    .kpi-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .kpi-label {
+      font-size: 0.72rem;
+      color: #9aa0a6;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-top: 2px;
+    }
+
     /* Filter Buttons */
     .btn-filter-group .btn {
       background-color: #2c2c2c;
@@ -118,6 +159,62 @@
       border-top: 1px solid #333;
       margin-top: 50px;
     }
+
+    /* ====== ANIMATIONS & ENHANCEMENTS ====== */
+    html { scroll-behavior: smooth; }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: #121212; }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #00E5FF, #00B8D4);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #00B8D4, #0091A9);
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    .gradient-text {
+      background: linear-gradient(90deg, #fff, #00E5FF, #00B8D4, #fff);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientShift 6s ease infinite;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .card {
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(0, 229, 255, 0.4);
+      box-shadow: 0 12px 40px rgba(0, 229, 255, 0.1);
+    }
+
+    .navbar-nav .nav-link { position: relative; }
+    .navbar-nav .nav-link::after {
+      content: "";
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #0dcaf0;
+      transition: width 0.3s ease;
+    }
+    .navbar-nav .nav-link:hover::after,
+    .navbar-nav .nav-link.active::after { width: 100%; }
   </style>
 </head>
 
@@ -134,9 +231,9 @@
           <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
           <li class="nav-item"><a class="nav-link active" href="{{ url_for('static_page') }}">Statistik & Analitik</a>
           </li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('cctv_page') }}">Peta CCTV</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('read_artikel') }}">Artikel</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">Tentang Kami</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('cctv_page') }}">Peta CCTV</a></li>
         </ul>
         <a href="{{ url_for('login') }}" class="btn btn-outline-light rounded-pill ms-lg-3">Login Admin</a>
       </div>
@@ -145,13 +242,13 @@
 
   <!-- ===== MAIN CONTENT ===== -->
   <main class="container py-5">
-    <h2 class="fw-bold mb-3 text-center text-white">Analitik Lalu Lintas</h2>
-    <p class="text-secondary text-center mb-4">
+    <h2 class="fw-bold mb-3 text-center text-white gradient-text">Analitik Lalu Lintas</h2>
+    <p class="text-secondary text-center mb-4 reveal">
       Pilih lokasi CCTV untuk melihat tren kepadatan lalu lintas.
     </p>
 
     <!-- CCTV SELECTOR -->
-    <div class="row justify-content-center mb-4">
+    <div class="row justify-content-center mb-4 reveal">
       <div class="col-md-6">
         <select class="form-select text-center py-2" id="cctvSelect">
           <option value="">-- Pilih CCTV --</option>
@@ -161,7 +258,7 @@
     </div>
 
     <!-- FILTER BUTTONS (Harian, Mingguan, Bulanan) -->
-    <div class="text-center mb-4">
+    <div class="text-center mb-4 reveal">
       <div class="btn-group btn-filter-group" role="group">
         <button class="btn active" onclick="changePeriod('harian', this)">Harian</button>
         <button class="btn" onclick="changePeriod('mingguan', this)">Mingguan</button>
@@ -169,8 +266,48 @@
       </div>
     </div>
 
+    <!-- KPI CARDS -->
+    <div class="row g-3 mb-4 reveal" id="kpiRow">
+      <div class="col-md-3 col-6">
+        <div class="kpi-card">
+          <div class="icon-chip" style="--chip:#00E5FF;"><i data-lucide="car"></i></div>
+          <div>
+            <div class="kpi-value" id="kpiTotal">-</div>
+            <div class="kpi-label">Total Kendaraan</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="kpi-card">
+          <div class="icon-chip" style="--chip:#FFD600;"><i data-lucide="gauge"></i></div>
+          <div>
+            <div class="kpi-value" id="kpiAvg">-</div>
+            <div class="kpi-label">Rata-rata / Titik</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="kpi-card">
+          <div class="icon-chip" style="--chip:#FF5252;"><i data-lucide="flame"></i></div>
+          <div>
+            <div class="kpi-value" id="kpiPeak">-</div>
+            <div class="kpi-label">Periode Terpadat</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="kpi-card">
+          <div class="icon-chip" style="--chip:#00E676;"><i data-lucide="bar-chart-3"></i></div>
+          <div>
+            <div class="kpi-value" id="kpiTopCat">-</div>
+            <div class="kpi-label">Kendaraan Terbanyak</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- CHART SECTION (Centered Single Chart) -->
-    <div class="row justify-content-center">
+    <div class="row justify-content-center reveal">
       <div class="col-lg-10">
         <div class="chart-card">
           <h4 id="chartTitle">Laporan Kendaraan Harian</h4>
@@ -191,11 +328,25 @@
 
   <!-- ===== SCRIPTS ===== -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script>
+    lucide.createIcons();
+
     // Global Vars
     let trafficChartInstance = null;
     let currentCctvId = null;
     let currentPeriod = 'harian';
+
+    // Scroll Reveal
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
     document.addEventListener('DOMContentLoaded', function () {
       // 1. Ambil Daftar CCTV
@@ -237,48 +388,154 @@
         .then(data => {
           if (!data.datasets) return;
 
-          // LOGIKA MULTI-LINE LABELS (Tanggal + Angka)
-          const multiLineLabels = data.labels.map((label, index) => {
-            const m = data.datasets.mobil[index] || 0;
-            const mt = data.datasets.motor[index] || 0;
-            const b = data.datasets.bus[index] || 0;
-            const t = data.datasets.truk[index] || 0;
-            const total = m + mt + b + t;
+          // LOGIKA MULTI-LINE LABELS (Tanggal + Angka) - hanya untuk data irit (harian/mingguan)
+          // Bulanan (12 label) tetap label singkat agar rapi, detail lewat tooltip
+          const isMulti = data.labels.length <= 7;
+          const chartLabels = isMulti
+            ? data.labels.map((label, index) => {
+                const m = data.datasets.mobil[index] || 0;
+                const mt = data.datasets.motor[index] || 0;
+                const b = data.datasets.bus[index] || 0;
+                const t = data.datasets.truk[index] || 0;
+                const total = m + mt + b + t;
 
-            return [
-              label,              // Baris 1: 13 Jan
-              "──────────",        // Baris 2: Garis
-              `Mobil : ${m}`,     // Baris 3
-              `Motor : ${mt}`,    // Baris 4
-              `Bus   : ${b}`,     // Baris 5
-              `Truk  : ${t}`,     // Baris 6
-              "──────────",        // Baris 7
-              `Total : ${total}`   // Baris 8
-            ];
+                return [
+                  label,              // Baris 1: 13 Jan
+                  "──────────",        // Baris 2: Garis
+                  `Mobil : ${m}`,     // Baris 3
+                  `Motor : ${mt}`,    // Baris 4
+                  `Bus   : ${b}`,     // Baris 5
+                  `Truk  : ${t}`,     // Baris 6
+                  "──────────",        // Baris 7
+                  `Total : ${total}`   // Baris 8
+                ];
+              })
+            : data.labels;
+
+          // ===== HITUNG KPI =====
+          const keys = ['mobil', 'motor', 'bus', 'truk'];
+          const catNames = { mobil: 'Mobil', motor: 'Motor', bus: 'Bus', truk: 'Truk' };
+          const sums = { mobil: 0, motor: 0, bus: 0, truk: 0 };
+          let grandTotal = 0;
+          let maxLabel = null;
+          let maxTotal = -1;
+          let maxCatName = '-';
+          let maxCatVal = -1;
+
+          data.labels.forEach((label, i) => {
+            let rowTotal = 0;
+            keys.forEach(k => {
+              const v = Number(data.datasets[k][i]) || 0;
+              sums[k] += v;
+              rowTotal += v;
+            });
+            grandTotal += rowTotal;
+            if (rowTotal > maxTotal) {
+              maxTotal = rowTotal;
+              maxLabel = label;
+            }
           });
 
-          renderTrafficChart(multiLineLabels, data.datasets);
+          keys.forEach(k => {
+            if (sums[k] > maxCatVal) {
+              maxCatVal = sums[k];
+              maxCatName = catNames[k];
+            }
+          });
+
+          const avg = data.labels.length ? Math.round(grandTotal / data.labels.length) : 0;
+          const peakLabel = Array.isArray(maxLabel) ? maxLabel[0] : (maxLabel || '-');
+
+          document.getElementById('kpiTotal').innerText = grandTotal.toLocaleString('id-ID');
+          document.getElementById('kpiAvg').innerText = avg.toLocaleString('id-ID');
+          document.getElementById('kpiPeak').innerText = peakLabel;
+          document.getElementById('kpiTopCat').innerText =
+            maxCatVal > 0 ? `${maxCatName} (${maxCatVal.toLocaleString('id-ID')})` : '-';
+
+          // Judul kartu sesuai periode
+          const titles = {
+            harian: 'Laporan Kendaraan 7 Hari Terakhir',
+            mingguan: 'Laporan Kendaraan Mingguan',
+            bulanan: 'Laporan Kendaraan 12 Bulan'
+          };
+          document.getElementById('chartTitle').innerText = titles[currentPeriod] || 'Laporan Kendaraan';
+
+          renderTrafficChart(chartLabels, data.datasets);
         });
+    }
+
+    function barGradient(context, topColor, bottomColor) {
+      const { ctx, chartArea } = context.chart;
+      if (!chartArea) return topColor;
+      const g = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+      g.addColorStop(0, bottomColor);
+      g.addColorStop(1, topColor);
+      return g;
     }
 
     function renderTrafficChart(labels, datasets) {
       const ctx = document.getElementById('trafficChart').getContext('2d');
       if (trafficChartInstance) trafficChartInstance.destroy();
 
+      // Ketebalan batang menyesuaikan jumlah data (bulanan=12 batang -> lebih ramping)
+      const groupCount = labels.length;
+      const barThickness = groupCount > 10 ? 14 : (groupCount > 6 ? 22 : 40);
+
       trafficChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
           labels: labels,
           datasets: [
-            { label: 'Mobil', data: datasets.mobil, backgroundColor: '#00E5FF', barThickness: 40 },
-            { label: 'Motor', data: datasets.motor, backgroundColor: '#FFD600', barThickness: 40 },
-            { label: 'Bus', data: datasets.bus, backgroundColor: '#00C853', barThickness: 40 },
-            { label: 'Truk', data: datasets.truk, backgroundColor: '#FF5252', barThickness: 40 }
+            {
+              label: 'Mobil',
+              data: datasets.mobil,
+              backgroundColor: (c) => barGradient(c, '#4DE8FF', 'rgba(0,184,212,0.15)'),
+              borderColor: '#00B8D4',
+              borderWidth: 1.5,
+              borderRadius: 8,
+              barThickness: barThickness,
+              hoverBackgroundColor: '#00E5FF'
+            },
+            {
+              label: 'Motor',
+              data: datasets.motor,
+              backgroundColor: (c) => barGradient(c, '#FFE45E', 'rgba(255,196,0,0.15)'),
+              borderColor: '#FFC400',
+              borderWidth: 1.5,
+              borderRadius: 8,
+              barThickness: barThickness,
+              hoverBackgroundColor: '#FFD600'
+            },
+            {
+              label: 'Bus',
+              data: datasets.bus,
+              backgroundColor: (c) => barGradient(c, '#5CF3B2', 'rgba(0,168,107,0.15)'),
+              borderColor: '#00A86B',
+              borderWidth: 1.5,
+              borderRadius: 8,
+              barThickness: barThickness,
+              hoverBackgroundColor: '#00E676'
+            },
+            {
+              label: 'Truk',
+              data: datasets.truk,
+              backgroundColor: (c) => barGradient(c, '#FF7A70', 'rgba(229,57,53,0.15)'),
+              borderColor: '#E53935',
+              borderWidth: 1.5,
+              borderRadius: 8,
+              barThickness: barThickness,
+              hoverBackgroundColor: '#FF5252'
+            }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: {
+            duration: 800,
+            easing: 'easeOutQuart',
+            delay: (ctx) => ctx.type === 'bar' && ctx.mode === 'default' ? ctx.dataIndex * 60 : 0
+          },
           scales: {
             x: {
               stacked: true,
@@ -298,8 +555,38 @@
             }
           },
           plugins: {
-            legend: { display: true, labels: { color: '#fff', font: { size: 12 } } },
-            tooltip: { mode: 'index', intersect: false }
+            legend: {
+              display: true,
+              labels: {
+                color: '#fff',
+                font: { size: 12, weight: '600', family: "'Poppins', sans-serif" },
+                usePointStyle: true,
+                pointStyle: 'circle',
+                boxWidth: 8,
+                padding: 20
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(15,15,15,0.95)',
+              titleColor: '#fff',
+              bodyColor: '#e0e0e0',
+              borderColor: 'rgba(0,229,255,0.35)',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 8,
+              boxPadding: 4,
+              usePointStyle: true,
+              callbacks: {
+                label: (ctx) => ` ${ctx.dataset.label} : ${(ctx.parsed.y || 0).toLocaleString('id-ID')}`,
+                footer: (items) => {
+                  if (!items.length) return '';
+                  const total = items.reduce((s, it) => s + (it.parsed.y || 0), 0);
+                  return '──────────\nTotal : ' + total.toLocaleString('id-ID');
+                }
+              }
+            }
           }
         }
       });

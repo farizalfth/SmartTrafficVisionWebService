@@ -7,6 +7,7 @@
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/icons.css') }}">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Google Fonts -->
@@ -67,60 +68,6 @@
             margin: 0 auto;
         }
 
-        .article-header {
-            margin-bottom: 30px;
-        }
-
-        .article-meta {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .article-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #fff;
-            line-height: 1.3;
-            margin-bottom: 20px;
-        }
-
-        .article-image {
-            width: 100%;
-            height: auto;
-            max-height: 500px;
-            object-fit: cover;
-            border-radius: 16px;
-            margin-bottom: 40px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        .article-body {
-            font-size: 1.1rem;
-            line-height: 1.8;
-            color: #ccc;
-            /* Agar enter/paragraf dari database terbaca */
-            white-space: pre-wrap; 
-            text-align: justify;
-        }
-
-        .back-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-            color: var(--text-muted);
-            margin-bottom: 30px;
-            transition: 0.3s;
-        }
-        .back-btn:hover {
-            color: var(--accent-cyan);
-            transform: translateX(-5px);
-        }
-
         /* Footer */
         footer {
             background-color: var(--bg-card);
@@ -129,6 +76,221 @@
             padding: 25px 0;
             border-top: 1px solid #333;
             margin-top: auto;
+        }
+
+        /* ====== ANIMATIONS & ENHANCEMENTS ====== */
+        html { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #121212; }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00E5FF, #00B8D4);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #00B8D4, #0091A9);
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #fff, #00E5FF, #00B8D4, #fff);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 6s ease infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .detail-hero img {
+            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
+        }
+        .detail-hero img:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 40px rgba(0, 229, 255, 0.15);
+        }
+
+        .navbar-nav .nav-link { position: relative; }
+        .navbar-nav .nav-link::after {
+            content: "";
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-cyan);
+            transition: width 0.3s ease;
+        }
+        .navbar-nav .nav-link:hover::after,
+        .navbar-nav .nav-link.active::after { width: 100%; }
+
+        /* ====== UPGRADE HALAMAN ARTIKEL ====== */
+        /* Progress baca di atas layar */
+        .progress-track {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: transparent;
+            z-index: 1080;
+            pointer-events: none;
+        }
+        .progress-track .progress-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, #00E5FF, #00B8D4);
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.6);
+            transition: width 0.1s linear;
+        }
+
+        /* Kartu artikel */
+        .article-wrap {
+            background: linear-gradient(145deg, #1a1a1a, #222222);
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            border-radius: 22px;
+            padding: 42px 48px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+        }
+        @media (max-width: 576px) {
+            .article-wrap { padding: 26px 18px; }
+        }
+
+        /* Tombol kembali */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            background: rgba(0, 229, 255, 0.08);
+            border: 1px solid rgba(0, 229, 255, 0.22);
+            color: #b8e6ff;
+            border-radius: 999px;
+            padding: 9px 18px;
+            font-weight: 500;
+            margin-bottom: 30px;
+            transition: 0.3s;
+        }
+        .back-btn:hover {
+            background: var(--accent-cyan);
+            color: #000;
+            transform: translateX(-4px);
+        }
+
+        /* Badge kategori */
+        .article-cat {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #00E5FF;
+            border: 1px solid rgba(0, 229, 255, 0.35);
+            border-radius: 999px;
+            padding: 5px 14px;
+            margin-bottom: 16px;
+        }
+
+        .article-title {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1.3;
+            margin-bottom: 6px;
+        }
+
+        /* Meta pill */
+        .article-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 14px 0 24px;
+        }
+        .meta-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #cfcfcf;
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 0.82rem;
+        }
+
+        /* Gambar dengan bingkai gradient */
+        .article-image {
+            width: 100%;
+            height: auto;
+            max-height: 480px;
+            object-fit: cover;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+            border: 2px solid rgba(0, 229, 255, 0.18);
+        }
+
+        /* Isi artikel + drop cap */
+        .article-body {
+            font-size: 1.08rem;
+            line-height: 1.9;
+            color: #d5d5d5;
+            white-space: pre-wrap;
+            text-align: justify;
+        }
+        .article-body::first-letter {
+            float: left;
+            font-size: 3.4rem;
+            line-height: 0.85;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            padding-right: 10px;
+            margin-top: 8px;
+        }
+
+        /* Tombol bagikan */
+        .share-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .share-label {
+            font-size: 0.85rem;
+            color: #9aa0a6;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+        .share-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            text-decoration: none;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+            border-radius: 999px;
+            padding: 8px 16px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .share-btn:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0, 229, 255, 0.4);
+            color: #00E5FF;
         }
     </style>
 </head>
@@ -142,37 +304,58 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('static_page') }}">Statistik & Analitik</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cctv_page') }}">Peta CCTV</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('read_artikel') }}">Artikel</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">Tentang Kami</a></li>
+                </ul>
                 <a href="{{ url_for('login') }}" class="btn btn-outline-custom ms-lg-3">Login Admin</a>
             </div>
         </div>
     </nav>
 
+    <!-- READING PROGRESS -->
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
     <!-- MAIN CONTENT -->
     <div class="container mt-5 mb-5">
-        <div class="article-container">
+        <div class="article-container reveal">
             <!-- Tombol Kembali -->
             <a href="{{ url_for('read_artikel') }}" class="back-btn">
                 <i data-lucide="arrow-left"></i> Kembali ke Daftar Artikel
             </a>
 
-            <!-- Header Artikel -->
-            <div class="article-header">
-                <h1 class="article-title">{{ artikel.judul }}</h1>
+            <article class="article-wrap reveal">
+                <!-- Header Artikel -->
+                <span class="article-cat"><i data-lucide="newspaper" size="12"></i> Artikel Smart Traffic</span>
+                <h1 class="article-title gradient-text">{{ artikel.judul }}</h1>
                 <div class="article-meta">
-                    <span><i data-lucide="calendar" size="14"></i> {{ artikel.tanggal.strftime('%d %B %Y') if artikel.tanggal else '-' }}</span>
-                    <span><i data-lucide="user" size="14"></i> Admin</span>
+                    <span class="meta-pill"><i data-lucide="calendar" size="14"></i> {{ artikel.tanggal.strftime('%d %B %Y') if artikel.tanggal else '-' }}</span>
+                    <span class="meta-pill"><i data-lucide="user" size="14"></i> Admin</span>
+                    <span class="meta-pill"><i data-lucide="clock" size="14"></i> <span id="readTime">1 mnt baca</span></span>
                 </div>
-            </div>
 
-            <!-- Gambar Artikel -->
-            {% if artikel.gambar %}
-                <img src="{{ url_for('static', filename='uploads/' + artikel.gambar) }}" alt="{{ artikel.judul }}" class="article-image">
-            {% endif %}
+                <!-- Gambar Artikel -->
+                {% if artikel.gambar %}
+                    <img src="{{ url_for('static', filename='uploads/' + artikel.gambar) }}" alt="{{ artikel.judul }}" class="article-image">
+                {% endif %}
 
-            <!-- Isi Artikel -->
-            <div class="article-body">
-                {{ artikel.isi }}
-            </div>
+                <!-- Isi Artikel -->
+                <div class="article-body" id="articleBody">
+                    {{ artikel.isi }}
+                </div>
+
+                <!-- Bagikan -->
+                <div class="share-row">
+                    <span class="share-label"><i data-lucide="share-2" size="14"></i> Bagikan:</span>
+                    <a href="#" class="share-btn" id="shareFacebook"><i data-lucide="facebook"></i> Facebook</a>
+                    <a href="#" class="share-btn" id="shareTwitter"><i data-lucide="twitter"></i> X / Twitter</a>
+                    <a href="#" class="share-btn" id="shareWhatsapp"><i data-lucide="message-circle"></i> WhatsApp</a>
+                    <button type="button" class="share-btn" id="copyLink"><i data-lucide="link"></i> Salin Tautan</button>
+                </div>
+            </article>
         </div>
     </div>
 
@@ -187,6 +370,77 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         lucide.createIcons();
+
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.12 });
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        // Estimasi waktu baca
+        const articleText = (document.getElementById('articleBody').innerText || '').trim();
+        const words = articleText.split(/\s+/).filter(Boolean).length;
+        const mins = Math.max(1, Math.ceil(words / 200));
+        document.getElementById('readTime').innerText = mins + ' mnt baca';
+
+        // Progress bar baca
+        const progressFill = document.getElementById('progressFill');
+        const updateProgress = () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            progressFill.style.width = (docHeight > 0 ? (scrollTop / docHeight) * 100 : 0) + '%';
+        };
+        window.addEventListener('scroll', updateProgress, { passive: true });
+        updateProgress();
+
+        // Tombol bagikan
+        const shareUrl = encodeURIComponent(window.location.href);
+        const shareText = encodeURIComponent(document.title);
+        document.getElementById('shareFacebook').href = 'https://www.facebook.com/sharer/sharer.php?u=' + shareUrl;
+        document.getElementById('shareTwitter').href = 'https://twitter.com/intent/tweet?url=' + shareUrl + '&text=' + shareText;
+        document.getElementById('shareWhatsapp').href = 'https://wa.me/?text=' + shareText + '%20' + shareUrl;
+
+        document.getElementById('copyLink').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('copyLink');
+            const ok = () => {
+                btn.innerHTML = '<i data-lucide="check"></i> Tersalin!';
+                lucide.createIcons();
+                setTimeout(() => {
+                    btn.innerHTML = '<i data-lucide="link"></i> Salin Tautan';
+                    lucide.createIcons();
+                }, 2000);
+            };
+            const fail = () => {
+                btn.innerHTML = '<i data-lucide="x"></i> Gagal Salin';
+                lucide.createIcons();
+                setTimeout(() => {
+                    btn.innerHTML = '<i data-lucide="link"></i> Salin Tautan';
+                    lucide.createIcons();
+                }, 2000);
+            };
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(window.location.href);
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = window.location.href;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                ok();
+            } catch (err) {
+                fail();
+            }
+        });
     </script>
 </body>
 </html>

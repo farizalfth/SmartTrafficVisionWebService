@@ -26,6 +26,9 @@ from collections import Counter
 # Simpan waktu kapan server dinyalakan
 SERVER_START_TIME = time.time()
 
+# Nilai stabilitas awal untuk animasi real-time pada Status Sistem
+_stability_value = 99.5
+
 # Inisialisasi Firebase
 # Pastikan file serviceAccountKey.json ada di folder yang sama dengan app.py
 cred = credentials.Certificate("serviceAccountKey.json")
@@ -53,16 +56,6 @@ except Exception as e:
 
 # COCO Class ID: 2=Car, 3=Motorcycle, 5=Bus, 7=Truck
 VEHICLE_CLASSES = [2, 3, 5, 7]
-
-# Data CCTV Manual (Karena tabel CCTV belum ada di MySQL)
-# URL ini akan digunakan oleh generator
-cctv_list = [
-    {'id': '1', 'name': 'CCTV Pontianak (Simpang Garuda)', 'url': 'https://www.youtube.com/watch?v=_xzKYnk6zSE'},
-    {'id': '2', 'name': 'CTV Pontianak (Tugu Khatulistiwa)', 'url': 'https://www.youtube.com/watch?v=BEw38LHC5x4'},
-    {'id': '3', 'name': 'CTV Demak (Alun-Alun)', 'url': 'https://www.youtube.com/embed/aboCZ7gkclk'},
-    {'id': '4', 'name': 'CCTV Demak (Pasar Bintoro)', 'url': 'https://www.youtube.com/watch?v=7c4CsGkmBu8'},
-    {'id': '5', 'name': 'CCTV Demak (Pertigaan Trengguli)', 'url': 'https://www.youtube.com/watch?v=5nw3G2jtWaU'}
-]
 
 # ===== KONEKSI DATABASE MYSQL (Untuk Admin & Artikel) =====
 db = mysql.connector.connect(
@@ -210,69 +203,75 @@ def generate_live_stream(video_url, cctv_id):
 # ===== SHARED LOGIC =====
 # =========================================================================
 
+DEFAULT_CCTV = [
+    ('CCTV Pontianak (Simpang Tanjung Raya)', 'https://www.youtube.com/watch?v=zNA1lktiKRs', -0.023851, 109.333423),
+    ('CCTV Pontianak (Gertak)', 'https://www.youtube.com/watch?v=cwqQmeWWLxc', -0.018940, 109.318680),
+    ('CCTV Demak (Pasar Karanganyar Kudus)', 'https://www.youtube.com/watch?v=EusCN4iE0xY', -6.894621, 110.636922),
+    ('CCTV Demak (Bogorame)', 'https://www.youtube.com/watch?v=uM1gksCoh8I', -6.900570, 110.630850),
+    ('CCTV Demak (Botorejo)', 'https://www.youtube.com/watch?v=H9YpOXcJO_s', -6.900280, 110.657220),
+]
+
+def init_cctv_table():
+    """Buat tabel cctv + isi data awal jika tabel masih kosong."""
+    try:
+        cursor = get_db_cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS cctv (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                url VARCHAR(500) NOT NULL,
+                lat DOUBLE NULL,
+                lon DOUBLE NULL,
+                status VARCHAR(50) DEFAULT 'Aktif',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+        cursor.execute("SELECT COUNT(*) AS n FROM cctv")
+        if cursor.fetchone()['n'] == 0:
+            cursor.executemany(
+                "INSERT INTO cctv (name, url, lat, lon) VALUES (%s,%s,%s,%s)",
+                DEFAULT_CCTV
+            )
+            db.commit()
+            print("Tabel cctv dibuat & diisi dengan data default.")
+        cursor.close()
+    except Exception as e:
+        print(f"Gagal inisialisasi tabel cctv: {e}")
+
+def _to_embed_url(url):
+    """Ubah URL watch YouTube menjadi URL embed."""
+    if 'watch?v=' in url:
+        video_id = url.split('watch?v=')[-1]
+        return f"https://www.youtube.com/embed/{video_id}"
+    return url
+
 def fetch_cctv_list():
-    return [
-        { 
-            "id": 1, 
-            "name": "CCTV Pontianak (Simpang Garuda)", 
-            "status": "Aktif", 
-            "lat": -0.023851, "lon": 109.333423,
-            "stream_url": "https://www.youtube.com/embed/_xzKYnk6zSE", 
-            "youtube_link": "https://www.youtube.com/watch?v=_xzKYnk6zSE" 
-        },
-        { 
-            "id": 2, 
-            "name": "CCTV Pontianak (Tugu Khatulistiwa)", 
-            "status": "Aktif",
-            "lat": 0.000000, "lon": 109.321100,
-            "stream_url": "https://www.youtube.com/embed/BEw38LHC5x4", 
-            "youtube_link": "https://www.youtube.com/watch?v=BEw38LHC5x4" 
-        },
-        { 
-            "id": 3, 
-            "name": "CCTV Demak (Alun-Alun)", 
-            "status": "Aktif",
-            "lat": -6.894621, "lon": 110.636922,
-            "stream_url": "https://www.youtube.com/embed/aboCZ7gkclk", 
-            "youtube_link": "https://www.youtube.com/watch?v=aboCZ7gkclk" 
-        },
-        { 
-            "id": 4, "name": "CCTV Demak (Pasar Bintoro)", "status": "Aktif",
-            "lat": -6.8850, "lon": 110.6400,
-            "stream_url": "https://www.youtube.com/embed/7c4CsGkmBu8", 
-            "youtube_link": "https://www.youtube.com/watch?v=7c4CsGkmBu8" 
-        },
-        { 
-            "id": 5, "name": "CCTV Demak (Pertigaan Trengguli)", "status": "Aktif",
-            "lat": -6.8700, "lon": 110.6500,
-            "stream_url": "https://www.youtube.com/embed/5nw3G2jtWaU", 
-            "youtube_link": "https://www.youtube.com/watch?v=5nw3G2jtWaU" 
-        },
-    ]
+    """Ambil daftar kamera dari tabel cctv MySQL."""
+    try:
+        cursor = get_db_cursor()
+        cursor.execute("SELECT id, name, url, lat, lon, status FROM cctv ORDER BY id")
+        rows = cursor.fetchall()
+        cursor.close()
+    except Exception as e:
+        print("Gagal membaca tabel cctv:", e)
+        rows = []
 
-    def logic_get_summary(cctv_id):
-        if not cctv_id:
-            return {...}
+    cameras = []
+    for r in rows:
+        cameras.append({
+            "id": r['id'],
+            "name": r['name'],
+            "status": r['status'] or 'Aktif',
+            "lat": float(r['lat']) if r['lat'] is not None else None,
+            "lon": float(r['lon']) if r['lon'] is not None else None,
+            "url": r['url'],
+            "youtube_link": r['url'],
+            "stream_url": _to_embed_url(r['url']),
+        })
+    return cameras
 
-    cursor = get_db_cursor()
-    cursor.execute("""
-        SELECT 
-            SUM(total_kendaraan) AS total,
-            MAX(kepadatan) AS max_kepadatan
-        FROM traffic_stats
-        WHERE cctv_id = %s
-        AND DATE(created_at) = CURDATE()
-    """, (cctv_id,))
-    
-    data = cursor.fetchone()
-    cursor.close()
-
-    return {
-        "kendaraan_hari_ini": data['total'] or 0,
-        "kepadatan_tertinggi": f"{data['max_kepadatan'] or 0}%",
-        "rata_rata_kecepatan": "-",
-        "kamera_aktif": "5"
-    }
+# ===== INISIALISASI TABEL CCTV (dipanggil saat startup) =====
+init_cctv_table()
 
 def get_real_vehicle_count(youtube_link):
     raise NotImplementedError
@@ -428,7 +427,7 @@ def get_firebase_logic_summary(cctv_id):
             "kepadatan_tertinggi": 0, 
             "rata_rata_kecepatan": "80 km/j",
             "status": "Lancar",
-            "kamera_aktif": len(cctv_list)
+            "kamera_aktif": len(fetch_cctv_list())
         }
     
     try:
@@ -474,7 +473,7 @@ def get_firebase_logic_summary(cctv_id):
                 "kepadatan_tertinggi": kepadatan_int, # Angka saja, JS akan tambah %
                 "rata_rata_kecepatan": f"{kecepatan_int} km/j",
                 "status": status_txt,
-                "kamera_aktif": len(cctv_list)
+                "kamera_aktif": len(fetch_cctv_list())
             }
             
     except Exception as e:
@@ -485,7 +484,7 @@ def get_firebase_logic_summary(cctv_id):
         "kepadatan_tertinggi": 0, 
         "rata_rata_kecepatan": "80 km/j",
         "status": "Lancar",
-        "kamera_aktif": len(cctv_list)
+        "kamera_aktif": len(fetch_cctv_list())
     }
 
 def get_firebase_logic_history(cctv_id, period):
@@ -664,23 +663,81 @@ def api_public_traffic_data():
 @app.route('/api/admin/server_status')
 @api_login_required
 def server_status():
+    import random
+
     # 1. Hitung Uptime (Lama server berjalan)
     uptime_seconds = int(time.time() - SERVER_START_TIME)
     hours, remainder = divmod(uptime_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
     uptime_str = f"{hours}h {minutes}m"
 
-    # 2. Logika "Kesehatan" atau Stabilitas
-    # Kita bisa asumsikan stabilitas 100% jika Firebase terkoneksi
-    # Di sini kita buat sedikit variasi agar terlihat real-time (misal 98-100%)
-    import random
-    stability_score = round(random.uniform(98.5, 99.9), 1)
+    # 2. Kesehatan sistem berdasarkan STATUS 5 CCTV (Aktif/Nonaktif)
+    cctv_total = 0
+    cctv_online = 0
+    cctv_offline = 0
+    try:
+        cursor = get_db_cursor()
+        cursor.execute("SELECT status, COUNT(*) AS n FROM cctv GROUP BY status")
+        rows = cursor.fetchall()
+        cursor.close()
+        for r in rows:
+            cctv_total += r['n']
+            if str(r['status']).lower() in ('aktif', 'online'):
+                cctv_online += r['n']
+            else:
+                cctv_offline += r['n']
+        cctv_total = cctv_online + cctv_offline
+    except Exception as e:
+        print("Gagal membaca status CCTV:", e)
+
+    # Stabilitas = proporsi CCTV aktif (dengan sedikit variasi agar terlihat hidup)
+    if cctv_total > 0:
+        base_health = (cctv_online / cctv_total) * 100
+    else:
+        base_health = 99.5
+    stability_score = round(max(0.0, min(100.0, base_health + random.uniform(-1.0, 1.0))), 1)
+
+    # 3. Sinyal tiap CCTV (Aktif -> 92-100%, Nonaktif -> OFF)
+    cctv_signals = []
+    try:
+        cursor = get_db_cursor()
+        cursor.execute("SELECT id, name, status FROM cctv ORDER BY id")
+        cams = cursor.fetchall()
+        cursor.close()
+        for c in cams:
+            aktif = str(c['status']).lower() in ('aktif', 'online')
+            cctv_signals.append({
+                "id": c['id'],
+                "name": c['name'],
+                "online": aktif,
+                "signal": round(random.uniform(92, 100), 1) if aktif else 0.0
+            })
+    except Exception as e:
+        print("Gagal membaca sinyal CCTV:", e)
+
+    # 4. Label kondisi berdasarkan kesehatan sistem
+    if stability_score >= 99.5:
+        status_label = "SANGAT STABIL"
+    elif stability_score >= 90:
+        status_label = "STABIL"
+    elif stability_score >= 75:
+        status_label = "OPTIMAL"
+    elif stability_score >= 50:
+        status_label = "DIPANTAU"
+    else:
+        status_label = "KRITIS"
 
     return jsonify({
-        "status": "ONLINE",
+        "status": "ONLINE" if stability_score > 0 else "OFFLINE",
+        "status_label": status_label,
         "uptime": uptime_str,
         "stability": stability_score,
-        "last_update": datetime.now().strftime("%H:%M:%S")
+        "cctv_total": cctv_total,
+        "cctv_online": cctv_online,
+        "cctv_offline": cctv_offline,
+        "cctv_signals": cctv_signals,
+        "last_update": datetime.now().strftime("%H:%M:%S"),
+        "server_time": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
     })
 
 # =========================================================================
@@ -820,6 +877,88 @@ def api_cctv_locations():
         return jsonify(cameras), 200
 
 # =========================================================================
+# --- API CRUD KAMERA (MANAJEMEN CCTV DI ADMIN) ---
+# =========================================================================
+
+def _parse_coord(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+def _parse_camera_payload(data):
+    return {
+        "name": (data.get('name') or '').strip(),
+        "url": (data.get('url') or '').strip(),
+        "lat": _parse_coord(data.get('lat')),
+        "lon": _parse_coord(data.get('lon')),
+        "status": (data.get('status') or 'Aktif').strip(),
+    }
+
+@app.route('/api/admin/cameras', methods=['GET'])
+@api_login_required
+def api_admin_cameras_list():
+    return jsonify({"status": "success", "data": fetch_cctv_list()}), 200
+
+@app.route('/api/admin/cameras', methods=['POST'])
+@api_login_required
+def api_admin_cameras_add():
+    data = request.get_json(silent=True) or request.form
+    p = _parse_camera_payload(data)
+
+    if not p['name'] or not p['url']:
+        return jsonify({"status": "error", "message": "Nama dan URL wajib diisi"}), 400
+
+    try:
+        cursor = get_db_cursor()
+        cursor.execute(
+            "INSERT INTO cctv (name, url, lat, lon, status) VALUES (%s,%s,%s,%s,%s)",
+            (p['name'], p['url'], p['lat'], p['lon'], p['status'])
+        )
+        db.commit()
+        new_id = cursor.lastrowid
+        cursor.close()
+        return jsonify({"status": "success", "message": "Kamera berhasil ditambahkan", "id": new_id}), 201
+    except Exception as e:
+        print("Gagal menambah kamera:", e)
+        return jsonify({"status": "error", "message": f"Gagal menambah kamera: {e}"}), 500
+
+@app.route('/api/admin/cameras/<int:cid>', methods=['PUT'])
+@api_login_required
+def api_admin_cameras_update(cid):
+    data = request.get_json(silent=True) or request.form
+    p = _parse_camera_payload(data)
+
+    if not p['name'] or not p['url']:
+        return jsonify({"status": "error", "message": "Nama dan URL wajib diisi"}), 400
+
+    try:
+        cursor = get_db_cursor()
+        cursor.execute(
+            "UPDATE cctv SET name=%s, url=%s, lat=%s, lon=%s, status=%s WHERE id=%s",
+            (p['name'], p['url'], p['lat'], p['lon'], p['status'], cid)
+        )
+        db.commit()
+        cursor.close()
+        return jsonify({"status": "success", "message": "Kamera berhasil diperbarui"}), 200
+    except Exception as e:
+        print("Gagal memperbarui kamera:", e)
+        return jsonify({"status": "error", "message": f"Gagal memperbarui kamera: {e}"}), 500
+
+@app.route('/api/admin/cameras/<int:cid>', methods=['DELETE'])
+@api_login_required
+def api_admin_cameras_delete(cid):
+    try:
+        cursor = get_db_cursor()
+        cursor.execute("DELETE FROM cctv WHERE id=%s", (cid,))
+        db.commit()
+        cursor.close()
+        return jsonify({"status": "success", "message": "Kamera berhasil dihapus"}), 200
+    except Exception as e:
+        print("Gagal menghapus kamera:", e)
+        return jsonify({"status": "error", "message": f"Gagal menghapus kamera: {e}"}), 500
+
+# =========================================================================
 # --- ROUTE API (PUBLIC DASHBOARD) ---
 # =========================================================================
 
@@ -884,7 +1023,7 @@ def get_logic_vehicle_distribution(cctv_id, period):
 @app.route('/')
 def index():
     cursor = get_db_cursor()
-    cursor.execute("SELECT id, judul, isi, gambar, tanggal FROM artikel WHERE published=1 ORDER BY tanggal DESC LIMIT 5")
+    cursor.execute("SELECT id, judul, isi, gambar, tanggal FROM artikel WHERE published=1 ORDER BY tanggal DESC, id DESC LIMIT 5")
     latest_articles = cursor.fetchall()
     cursor.close()
     return render_template('index.html', latest_articles=latest_articles)
@@ -892,7 +1031,7 @@ def index():
 @app.route('/dashboard')
 def dashboard():
     cursor = get_db_cursor()
-    cursor.execute("SELECT id, judul, gambar, tanggal FROM artikel WHERE published=1 ORDER BY tanggal DESC LIMIT 3")
+    cursor.execute("SELECT id, judul, gambar, tanggal FROM artikel WHERE published=1 ORDER BY tanggal DESC, id DESC LIMIT 5")
     latest_articles = cursor.fetchall()
     cursor.close()
     cctv_list = fetch_cctv_list()
@@ -927,7 +1066,7 @@ def kelola_artikel():
     cursor.execute("SELECT COUNT(*) AS total FROM artikel")
     total = cursor.fetchone()['total']
     total_pages = (total + per_page - 1) // per_page
-    cursor.execute("SELECT id, judul, isi, gambar, published, tanggal FROM artikel ORDER BY tanggal DESC LIMIT %s OFFSET %s", (per_page, offset))
+    cursor.execute("SELECT id, judul, isi, gambar, published, tanggal FROM artikel ORDER BY tanggal DESC, id DESC LIMIT %s OFFSET %s", (per_page, offset))
     data = cursor.fetchall()
     cursor.close()
     return render_template('kelola_artikel.html', artikel=data, page=page, total_pages=total_pages, per_page=per_page)
@@ -1056,11 +1195,11 @@ def static_page():
 def video_feed():
     cctv_id = request.args.get('cctv_id')
     
-    # Cari URL video dari list manual
+    # Cari URL video dari tabel cctv MySQL
     target_url = None
-    for cctv in cctv_list:
-        if cctv['id'] == cctv_id:
-            target_url = cctv['url']
+    for cctv in fetch_cctv_list():
+        if str(cctv['id']) == str(cctv_id):
+            target_url = cctv['youtube_link']
             break
             
     if not target_url:
@@ -1078,16 +1217,12 @@ def admin_dashboard():
         
         # 2. Ambil 5 artikel terbaru (Gabungan dari limit 3 dan limit 5)
         # Kita ambil 5 supaya lebih lengkap
-        cursor.execute("SELECT * FROM artikel ORDER BY tanggal DESC LIMIT 5")
+        cursor.execute("SELECT * FROM artikel ORDER BY tanggal DESC, id DESC LIMIT 5")
         latest_articles = cursor.fetchall()
         cursor.close()
 
         # 3. Ambil daftar CCTV
-        try:
-            cctvs = fetch_cctv_list()
-        except:
-            # Jika fetch_cctv_list error/kosong, gunakan list manual kita tadi
-            cctvs = cctv_list 
+        cctvs = fetch_cctv_list()
 
         # 4. Render ke template (Hanya panggil render_template SATU KALI)
         return render_template('admin_dashboard.html', 

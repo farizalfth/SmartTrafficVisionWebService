@@ -7,6 +7,7 @@
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/icons.css') }}">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Google Fonts -->
@@ -181,6 +182,82 @@
             border-top: 1px solid #333;
             margin-top: auto;
         }
+
+        /* ====== ANIMATIONS & ENHANCEMENTS ====== */
+        html { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #121212; }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00E5FF, #00B8D4);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #00B8D4, #0091A9);
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        .reveal-left { transform: translateX(-60px); }
+        .reveal-right { transform: translateX(60px); }
+        .reveal-left.visible, .reveal-right.visible { transform: translateX(0); }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #fff, #00E5FF, #00B8D4, #fff);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 6s ease infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .feature-card {
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+        }
+        .feature-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: -100%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.12), transparent);
+            transform: skewX(-20deg);
+            transition: left 0.6s ease;
+        }
+        .feature-card:hover::before { left: 130%; }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 229, 255, 0.5);
+            box-shadow: 0 12px 40px rgba(0, 229, 255, 0.12);
+        }
+        .feature-card .icon {
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .feature-card:hover .icon { transform: rotate(-8deg) scale(1.15); }
+
+        .navbar-nav .nav-link { position: relative; }
+        .navbar-nav .nav-link::after {
+            content: "";
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-cyan);
+            transition: width 0.3s ease;
+        }
+        .navbar-nav .nav-link:hover::after,
+        .navbar-nav .nav-link.active::after { width: 100%; }
     </style>
 </head>
 <body>
@@ -193,17 +270,69 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('static_page') }}">Statistik & Analitik</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cctv_page') }}">Peta CCTV</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('read_artikel') }}">Artikel</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('about') }}">Tentang Kami</a></li>
+                </ul>
                 <a href="{{ url_for('login') }}" class="btn btn-outline-custom ms-lg-3">Login Admin</a>
             </div>
         </div>
     </nav>
 
     <!-- HEADER -->
-    <div class="container text-center mt-5 mb-5">
-        <h1 class="hero-title display-4">Tentang Kami</h1>
+    <div class="container text-center mt-5 mb-5 reveal">
+        <h1 class="hero-title display-4 gradient-text">Tentang Kami</h1>
         <p class="hero-subtitle">
-            Mengenal lebih dekat visi, misi, dan teknologi di balik Smart Traffic Vision.
+            Smart Traffic Vision adalah sistem pemantauan lalu lintas berbasis
+            Artificial Intelligence yang mendeteksi kendaraan secara real-time,
+            menyajikan data analitik, dan memantau kamera CCTV di berbagai titik kota.
         </p>
+    </div>
+
+    <!-- FITUR UTAMA -->
+    <div class="container mb-5">
+        <h3 class="text-white fw-bold mb-4 text-center gradient-text">Fitur Utama</h3>
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6 reveal">
+                <div class="tech-card feature-card">
+                    <div class="tech-icon-box"><i data-lucide="video" class="tech-icon"></i></div>
+                    <div class="tech-text">
+                        <strong>Real-time Monitoring</strong>
+                        <span>Akses tayangan langsung CCTV dari berbagai titik kota tanpa jeda.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 reveal">
+                <div class="tech-card feature-card">
+                    <div class="tech-icon-box"><i data-lucide="scan-eye" class="tech-icon"></i></div>
+                    <div class="tech-text">
+                        <strong>AI Detection</strong>
+                        <span>Mendeteksi & menghitung mobil, motor, bus, dan truk secara otomatis.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 reveal">
+                <div class="tech-card feature-card">
+                    <div class="tech-icon-box"><i data-lucide="bar-chart-3" class="tech-icon"></i></div>
+                    <div class="tech-text">
+                        <strong>Data Analitik</strong>
+                        <span>Grafik tren kepadatan & distribusi kendaraan harian, mingguan, dan bulanan.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 reveal">
+                <div class="tech-card feature-card">
+                    <div class="tech-icon-box"><i data-lucide="map-pin" class="tech-icon"></i></div>
+                    <div class="tech-text">
+                        <strong>Peta CCTV</strong>
+                        <span>Peta sebaran kamera dengan status kondisi lalu lintas secara langsung.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- MAIN CONTENT -->
@@ -211,76 +340,85 @@
         
         <!-- VISI & MISI -->
         <div class="row g-4 mb-5">
-            <div class="col-lg-6">
+            <div class="col-lg-6 reveal reveal-left">
                 <div class="custom-card">
                     <h4 class="section-title"><i data-lucide="eye"></i> Visi Kami</h4>
                     <p style="color: #b0b0b0;">
-                        Menjadi pionir dalam solusi manajemen lalu lintas cerdas yang inovatif,
-                        aman, dan efisien untuk kota-kota modern. Kami berkomitmen untuk mengurangi
-                        kepadatan lalu lintas, meningkatkan keselamatan berkendara, dan memberikan
-                        informasi real-time yang akurat kepada masyarakat.
+                        Menjadi solusi pemantauan lalu lintas berbasis AI yang membantu kota
+                        memahami kondisi jalan secara real-time. Kami ingin kepadatan arus lalu
+                        lintas dapat terukur, keselamatan berkendara meningkat, dan informasi
+                        yang akurat mudah diakses oleh seluruh masyarakat.
                     </p>
                 </div>
             </div>
-            <div class="col-lg-6">
+            <div class="col-lg-6 reveal reveal-right">
                 <div class="custom-card">
                     <h4 class="section-title"><i data-lucide="target"></i> Misi Kami</h4>
                     <ul class="list-unstyled" style="color: #b0b0b0;">
-                        <li class="mb-2"><i data-lucide="check-circle" size="16" class="text-info me-2"></i>Membangun sistem deteksi berbasis AI.</li>
-                        <li class="mb-2"><i data-lucide="check-circle" size="16" class="text-info me-2"></i>Menyediakan analisis data mendalam.</li>
-                        <li class="mb-2"><i data-lucide="check-circle" size="16" class="text-info me-2"></i>Platform responsif Web & Mobile.</li>
-                        <li class="mb-2"><i data-lucide="check-circle" size="16" class="text-info me-2"></i>Kolaborasi untuk kota yang lebih baik.</li>
+                        <li class="mb-2"><i data-lucide="check-circle" size="16" class="text-info me-2"></i>Mendeteksi & menghitung kendaraan (mobil, motor, bus, truk) secara real-time dengan AI.</li>
+                        <li class="mb-2"><i data-lucide="check-circle" size="16" class="text-info me-2"></i>Memantau kondisi lalu lintas (lancar, padat, macet) melalui tayangan CCTV.</li>
+                        <li class="mb-2"><i data-lucide="check-circle" size="16" class="text-info me-2"></i>Menyajikan data statistik berupa grafik tren & distribusi kendaraan.</li>
+                        <li class="mb-2"><i data-lucide="check-circle" size="16" class="text-info me-2"></i>Menyediakan peta sebaran titik CCTV dan kanal aspirasi masyarakat.</li>
                     </ul>
                 </div>
             </div>
         </div>
 
         <!-- TEKNOLOGI -->
-        <h3 class="text-white fw-bold mb-4 text-center">Teknologi Kami</h3>
+        <h3 class="text-white fw-bold mb-4 text-center gradient-text">Teknologi Kami</h3>
         <!-- Menggunakan justify-content-center agar kartu di baris bawah berada di tengah -->
         <div class="row g-4 justify-content-center mb-5">
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-4 col-md-6 reveal">
                 <div class="tech-card">
                     <div class="tech-icon-box"><i data-lucide="code-2" class="tech-icon"></i></div>
                     <div class="tech-text">
-                        <strong>Backend</strong>
+                        <strong>Backend & API</strong>
                         <span>Flask (Python) RESTful API</span>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-4 col-md-6 reveal">
                 <div class="tech-card">
-                    <div class="tech-icon-box"><i data-lucide="layout" class="tech-icon"></i></div>
+                    <div class="tech-icon-box"><i data-lucide="scan-eye" class="tech-icon"></i></div>
                     <div class="tech-text">
-                        <strong>Frontend Web</strong>
-                        <span>Bootstrap 5 & Chart.js</span>
+                        <strong>AI Detection</strong>
+                        <span>Computer Vision & YOLO11</span>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-4 col-md-6 reveal">
                 <div class="tech-card">
-                    <div class="tech-icon-box"><i data-lucide="smartphone" class="tech-icon"></i></div>
+                    <div class="tech-icon-box"><i data-lucide="zap" class="tech-icon"></i></div>
                     <div class="tech-text">
-                        <strong>Mobile App</strong>
-                        <span>Flutter (Android/iOS)</span>
+                        <strong>Realtime Database</strong>
+                        <span>Firebase Realtime Database</span>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-4 col-md-6 reveal">
                 <div class="tech-card">
                     <div class="tech-icon-box"><i data-lucide="database" class="tech-icon"></i></div>
                     <div class="tech-text">
                         <strong>Database</strong>
-                        <span>MySQL Storage</span>
+                        <span>MySQL (Admin & Artikel)</span>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-4 col-md-6 reveal">
+                <div class="tech-card">
+                    <div class="tech-icon-box"><i data-lucide="layout" class="tech-icon"></i></div>
+                    <div class="tech-text">
+                        <strong>Frontend Web</strong>
+                        <span>Bootstrap 5, Chart.js & Leaflet</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 reveal">
                 <div class="tech-card">
                     <div class="tech-icon-box"><i data-lucide="video" class="tech-icon"></i></div>
                     <div class="tech-text">
-                        <strong>AI Detection</strong>
-                        <span>Computer Vision & YOLO</span>
+                        <strong>Streaming Video</strong>
+                        <span>Flask Video Feed CCTV</span>
                     </div>
                 </div>
             </div>
@@ -288,31 +426,31 @@
 
         <!-- TIM KAMI -->
         <div class="mt-5">
-            <h3 class="text-white fw-bold mb-2 text-center">Tim Pengembang</h3>
+            <h3 class="text-white fw-bold mb-2 text-center gradient-text">Tim Pengembang</h3>
             <p class="text-center text-info mb-4 fw-medium" style="letter-spacing: 0.5px;">
                 Kelompok 3 - Kelas 5B Teknik Informatika
             </p>
             
             <div class="row justify-content-center g-4">
-                <div class="col-lg-3 col-sm-6">
+                <div class="col-lg-3 col-sm-6 reveal">
                     <div class="team-card">
                         <div class="avatar-placeholder">MF</div>
                         <h5 class="text-white mb-1">M. Fariz Alfattah</h5>
                     </div>
                 </div>
-                <div class="col-lg-3 col-sm-6">
+                <div class="col-lg-3 col-sm-6 reveal">
                     <div class="team-card">
                         <div class="avatar-placeholder">NN</div>
                         <h5 class="text-white mb-1">Nadhif Nuf Fathin</h5>
                     </div>
                 </div>
-                <div class="col-lg-3 col-sm-6">
+                <div class="col-lg-3 col-sm-6 reveal">
                     <div class="team-card">
                         <div class="avatar-placeholder">BC</div>
                         <h5 class="text-white mb-1">Bening Cahya Aura</h5>
                     </div>
                 </div>
-                <div class="col-lg-3 col-sm-6">
+                <div class="col-lg-3 col-sm-6 reveal">
                     <div class="team-card">
                         <div class="avatar-placeholder">FN</div>
                         <h5 class="text-white mb-1">Fajrina Nurhaliza</h5>
@@ -334,6 +472,16 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         lucide.createIcons();
+
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.12 });
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
     </script>
 </body>
 </html>
