@@ -57,7 +57,7 @@ const DATASET_COLORS = {
 function makeLabels(labels) {
   // Label sumbu X dibuat bersih satu baris; rincian kendaraan pindah ke tooltip.
   return labels.map((label) =>
-    Array.isArray(label) ? label.join(" · ") : label
+    Array.isArray(label) ? label[0] : label
   );
 }
 
@@ -92,6 +92,8 @@ export function TrafficBarChart({ labels = [], datasets = {}, _period = "harian"
     }),
   };
 
+  const xFont = labels.length > 10 ? 10 : labels.length > 6 ? 11 : 12;
+
   return (
     <div style={{ height: `${height}px`, position: "relative", width: "100%" }}>
       <Bar
@@ -99,15 +101,17 @@ export function TrafficBarChart({ labels = [], datasets = {}, _period = "harian"
         options={{
           responsive: true,
           maintainAspectRatio: false,
+          layout: { padding: { top: 10, right: 8, bottom: 4, left: 4 } },
           scales: {
             x: {
               stacked: true,
               ticks: {
                 color: "#fff",
-                font: { size: 11 },
+                font: { size: xFont },
                 maxRotation: 0,
+                minRotation: 0,
                 autoSkip: false,
-                padding: 8,
+                padding: 6,
               },
               grid: { display: false },
               border: { display: false },
@@ -121,14 +125,24 @@ export function TrafficBarChart({ labels = [], datasets = {}, _period = "harian"
                 color: "#94a3b8",
                 callback: (v) => Number(v).toLocaleString("id-ID"),
                 maxTicksLimit: 6,
-                padding: 8,
+                padding: 6,
               },
               grid: { color: "rgba(255,255,255,0.06)", drawTicks: false },
               border: { display: false },
             },
           },
           plugins: {
-            legend: legendStyle,
+            legend: {
+              position: "bottom",
+              labels: {
+                color: "#fff",
+                font: { size: 11, weight: "600", family: "'Poppins', sans-serif" },
+                usePointStyle: true,
+                pointStyle: "circle",
+                boxWidth: 8,
+                padding: 14,
+              },
+            },
             tooltip: {
               ...tooltipStyle,
               callbacks: {

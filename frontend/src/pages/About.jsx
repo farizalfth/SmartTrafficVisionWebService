@@ -92,7 +92,7 @@ export default function About() {
       <div className="row g-4 justify-content-center">
         {[
           { initials: "MF", name: "M. Fariz Alfattah" },
-          { initials: "NN", name: "Nadhif Nuf Fathin" },
+          { initials: "NN", name: "Nadhif Nur Fathin" },
           { initials: "BC", name: "Bening Cahya Aura" },
           { initials: "FN", name: "Fajrina Nurhaliza" },
         ].map((m) => (
