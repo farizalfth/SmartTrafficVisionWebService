@@ -321,9 +321,18 @@ export default function AdminDashboard() {
               )}
             </div>
             {analysis && !analyzing && (
-              <p className="mt-2 mb-0 small text-info">
-                <i className="bi bi-qr-code-scan me-1"></i>HASIL DETEKSI YOLO11: Live Streaming Deteksi Aktif
-              </p>
+              <div className="text-center mt-3 mb-1">
+                <span className="badge rounded-pill text-dark fw-bold px-3 py-2" style={{ background: "linear-gradient(45deg,#FFD600,#FF6D00)" }}>
+                  <i className="bi bi-qr-code-scan me-1"></i>HASIL DETEKSI YOLO11
+                </span>
+                <span className="badge rounded-pill text-white fw-bold px-3 py-2 ms-2" style={{ background: "#e11d48" }}>
+                  <i className="bi bi-broadcast-pin me-1"></i>Live Streaming Aktif
+                </span>
+                <div className="d-flex justify-content-center align-items-center gap-2 mt-2 small text-muted">
+                  <span className="live-badge"><i className="bi bi-camera-video me-1"></i>LIVE</span>
+                  <span><i className="bi bi-camera me-1"></i>{selectedCctv?.name}</span>
+                </div>
+              </div>
             )}
           </div>
         </div>
