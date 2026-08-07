@@ -21,3 +21,9 @@ serviceAccountKey.json
 
 # Editor swap files
 *.swp
+
+# Data backup migrasi (bisa berisi kredensial admin)
+exports/
+
+# File upload uji coba
+static/uploads/*_test_upload.jpg
