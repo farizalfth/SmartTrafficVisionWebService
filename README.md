@@ -5,20 +5,22 @@ Sistem pemantauan lalu lintas **real-time** berbasis **AI (Computer Vision)** ya
 ## Alur Sistem
 
 ```
-┌──────────────┐  baca/tulis langsung     ┌───────────────────────────┐
-│    Browser   │ ◀──────────────────────▶ │  Firebase Realtime DB     │
-│  (React SPA) │                          │  cctv · artikel · admin   │
-└──────┬───────┘                          │  traffic_stats · komentar │
-       │  MJPEG / API                     └────────────▲──────────────┘
-       ▼                                               │ menulis hasil YOLO
-┌───────────────────────────────┐                      │
-│  AI Server (Python + Flask)   │ ─────────────────────┘
+┌──────────────┐  artikel & gambar ⇄   ┌───────────────────────────┐
+│    Browser   │ ◀───────────────────▶ │  Supabase (Postgres +     │
+│  (React SPA) │                       │   Storage "Image Artikel")│
+│              │  baca/tulis langsung  ┌───────────────────────────┐
+│              │ ◀───────────────────▶ │  Firebase Realtime DB     │
+└──────┬───────┘                       │  cctv · admin · komentar  │
+       │  MJPEG / API                  └────────────▲──────────────┘
+       ▼                                           │ menulis hasil YOLO
+┌───────────────────────────────┐                  │
+│  AI Server (Python + Flask)   │ ─────────────────┘
 │  ai_server.py · YOLO11        │
 └───────────────────────────────┘
 ```
 
 1. **AI Server** (`ai_server.py`) menjalankan loop deteksi untuk setiap CCTV aktif di Firebase. Tiap ±10 detik ia mengambil frame dari stream YouTube (`cap_from_youtube`), mendeteksi kendaraan dengan **YOLO11**, lalu menulis `total`, `kepadatan_persen`, `detail`, dan `status` ke node `traffic_stats/<cctv_id>/live`.
-2. **Frontend** membaca data langsung dari Firebase untuk dashboard, peta, analitik, dan artikel — jadi tetap berfungsi penuh walau AI server sedang mati (data hanya "beku").
+2. **Frontend** membaca data langsung dari Firebase (CCTV, statistik, komentar) dan Supabase (artikel + gambar) — jadi tetap berfungsi penuh walau AI server sedang mati (data hanya "beku").
 3. **Status server** (`/api/server_status`) mengukur **sinyal real** tiap CCTV (latensi ping ke thumbnail YouTube) dan menampilkan stabilitas sistem, bukan angka hardcode.
 
 ## Fitur Utama
@@ -43,10 +45,13 @@ SmartTrafficVisionWeb/
 ├── yolo11n.pt                 # Model AI YOLO11 (TIDAK di-commit)
 ├── static/uploads/            # Gambar artikel (dilayani AI server di /static)
 └── frontend/                  # Aplikasi React (Vite)
-    ├── .env.example           # Konfigurasi Firebase + URL AI server
+    ├── .env.example           # Konfigurasi Firebase + Supabase + URL AI server
+    ├── supabase.sql           # SQL pembuatan tabel `artikel` di Supabase (jalankan di dashboard)
+    ├── scripts/seed_artikel.mjs # Seed artikel ke Supabase (hapus lama + isi artikel baru)
     ├── vercel.json            # SPA rewrites untuk Vercel
     └── src/
-        ├── lib/firebase.js    # Helper baca/tulis Firebase + upload gambar
+        ├── lib/firebase.js    # Helper baca/tulis Firebase + upload gambar ke Supabase Storage
+        ├── lib/supabase.js    # Helper CRUD artikel via Supabase Postgres (REST)
         ├── lib/traffic.js     # Logika agregasi statistik (port dari app.py)
         ├── components/        # Navbar, Footer, Charts, CctvMap, Reveal, dll.
         └── pages/             # Halaman user & admin (lihat tabel rute)
@@ -95,8 +100,6 @@ VITE_IMAGE_BASE_URL=
 ```
 cctv/
   c1 ... c5            # {id, name, url, lat, lon, status} — key ber-prefix agar tidak jadi array
-artikel/
-  a1 ... aN            # {id, judul, tanggal, isi, gambar, published, views}
 admin/                 # {username, password} — dipakai login admin
 traffic_stats/
   <cctv_id>/
@@ -105,7 +108,9 @@ traffic_stats/
 user_comments/         # komentar pengguna
 ```
 
-> Key Firebase tidak boleh angka murni (RTDB mengubahnya jadi array), karena itu memakai prefiks `c1..c5` dan `a1..aN`.
+> Key Firebase tidak boleh angka murni (RTDB mengubahnya jadi array), karena itu memakai prefiks `c1..c5`.
+>
+> **Artikel sudah tidak lagi di Firebase** — data artikel disimpan di **Supabase Postgres** (tabel `artikel`), lihat [Supabase Artikel](#supabase-artikel-data-crud) di bawah.
 
 ## Menjalankan AI Server
 
@@ -143,18 +148,60 @@ npm run build    # build produksi ke dist/
 1. Buka `/login`, isi `username` & `password` (divalidasi ke node `admin` di Firebase).
 2. Sukses → `localStorage.stv_admin = "1"`, redirect ke `/admin`.
 3. `/admin`: pantau **status AI server** (sinyal, stabilitas, uptime dari `/api/server_status`), pilih CCTV untuk menonton **stream deteksi AI**, dan kelola CCTV (tambah/edit/hapus).
-4. `/kelola_artikel`: kelola artikel — **Tambah** (`/artikel/tambah`) atau **Edit** (`/artikel/edit/:id`) dengan upload gambar ke AI server; publikasikan dengan cek **Published**.
+4. `/kelola_artikel`: kelola artikel — **Tambah** (`/artikel/tambah`) atau **Edit** (`/artikel/edit/:id`); data tersimpan di **Supabase** (tabel `artikel`) dan gambar di-upload ke Supabase Storage.
 5. Logout menghapus `stv_admin` dan kembali ke `/login`.
+
+## Supabase Artikel (Data CRUD)
+
+Sejak frontend memakai Supabase, **artikel tidak lagi disimpan di Firebase RTDB**. CRUD artikel (tambah/edit/hapus/publish) dan gambar disimpan di Supabase:
+
+- **Data artikel** → tabel Postgres `public.artikel` (id, judul, tanggal, isi, gambar, published, views).
+- **Gambar artikel** → Supabase Storage bucket publik `Image Artikel`.
+
+### Setup Supabase Artikel
+
+1. Buat project di https://supabase.com (paket gratis 500 MB).
+2. **Storage → New bucket** → nama `Image Artikel` → centang **Public bucket**.
+3. **SQL Editor → New query** → jalankan isi `frontend/supabase.sql` (membuat tabel `artikel` + RLS policy akses anon).
+4. **Project Settings → API** → salin **Project URL** dan **anon public key** ke `frontend/.env`:
+   ```env
+   VITE_SUPABASE_URL=https://xxxx.supabase.co
+   VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
+   VITE_SUPABASE_BUCKET=Image Artikel
+   ```
+   (Variabel yang sama juga diisi di dashboard Vercel.)
+
+### Seed / hapus artikel via script
+
+```bash
+cd frontend
+node --env-file=.env scripts/seed_artikel.mjs      # hapus semua artikel lama + isi artikel baru
+node --env-file=.env scripts/seed_artikel.mjs --keep-existing   # hanya tambah, jangan hapus lama
+```
 
 ## Upload Gambar Artikel
 
-Gambar artikel **tidak memakai Firebase Storage** (butuh paket Blaze/kartu kredit). Gambar disimpan di **disk AI server**:
+Gambar artikel baru disimpan ke **Supabase Storage** (bukan Firebase Storage, bukan disk AI server) supaya punya **URL publik** yang bisa dimuat semua pengunjung situs yang sudah di-deploy (Vercel) di perangkat mana pun:
 
-1. Frontend upload via `POST /api/upload` → disimpan ke `static/uploads/`.
-2. AI server (Flask) menyajikan folder itu otomatis di `/static/uploads/<nama>`.
-3. URL lengkap disimpan di field `gambar` artikel; gambar lama yang hanya berisi nama file di-resolve lewat `VITE_AI_SERVER_URL`.
+1. Admin memilih file gambar saat tambah/edit artikel.
+2. `uploadArticleImage()` di `lib/firebase.js` meng-upload langsung dari browser ke bucket Supabase.
+3. Field `gambar` menyimpan **URL publik** `https://<ref>.supabase.co/storage/v1/object/public/Image%20Artikel/<nama>`.
 
-Karena itu **`VITE_AI_SERVER_URL` harus URL publik** agar pengunjung Vercel bisa memuat gambar dan memanggil API. (Solusi publik gratis: tunnel Cloudflare/ngrok atau port-forward router.)
+### Setup Supabase Storage
+
+1. Buat project di https://supabase.com (paket gratis 500 MB).
+2. **Storage → New bucket** → nama `Image Artikel` → centang **Public bucket**.
+3. **Project Settings → API** → salin **Project URL** dan **anon public key**.
+4. Isi env var di `frontend/.env` (dan di Vercel):
+   ```env
+   VITE_SUPABASE_URL=https://xxxx.supabase.co
+   VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
+   VITE_SUPABASE_BUCKET=Image Artikel
+   ```
+
+### Gambar artikel lama (berupa nama file saja)
+
+Agar tetap tampil, **salin gambar ke `frontend/public/static/uploads/`** lalu `npm run build` — gambar ikut ter-bundle ke `dist` dan dilayani CDN Vercel dari origin situs. `imageUrl()` otomatis memakai `window.location.origin` jika base (`VITE_AI_SERVER_URL` / `VITE_IMAGE_BASE_URL`) berupa `localhost`/IP LAN yang tidak terjangkau publik, dan memakai base aslinya jika sudah URL publik.
 
 ## Deploy
 

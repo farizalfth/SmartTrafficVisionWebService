@@ -1,6 +1,13 @@
 // Konfigurasi & helper Firebase (Realtime Database)
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, get, set, update, push, remove } from "firebase/database";
+import {
+  listArticles,
+  getArticle,
+  saveArticle as supabaseSaveArticle,
+  deleteArticle as supabaseDeleteArticle,
+  bumpArticleViews as supabaseBumpArticleViews,
+} from "./supabase";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -60,48 +67,49 @@ export async function deleteCctv(id) {
   await remove(ref(rtdb, `cctv/c${id}`));
 }
 
-// ---- Artikel ----
+// ---- Artikel (data disimpan di Supabase Postgres, lihat supabase.sql) ----
 export async function getArticles({ published } = {}) {
-  const snap = await get(ref(rtdb, "artikel"));
-  const raw = snap.val() || {};
-  let list = Object.entries(raw)
-    .filter(([, v]) => v && typeof v === "object")
-    .map(([key, v]) => ({ key, id: v.id ?? key, ...v }));
-  if (published !== undefined) list = list.filter((a) => Number(a.published) === Number(published));
-  return list.sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal)) || (b.id - a.id));
+  return listArticles({ published });
 }
 
 export async function getArticleById(id) {
-  const list = await getArticles();
-  return list.find((a) => String(a.id) === String(id));
+  return getArticle(id);
 }
 
 export async function saveArticle(artikel) {
-  let id = artikel.id;
-  if (id == null) {
-    const list = await getArticles();
-    id = list.length ? Math.max(...list.map((a) => Number(a.id) || 0)) + 1 : 1;
-  }
-  const { key: _drop, id: _idDrop, ...payload } = { ...artikel, id: Number(id) };
-  await set(ref(rtdb, `artikel/a${id}`), payload);
-  return id;
+  return supabaseSaveArticle(artikel);
 }
 
 export async function deleteArticle(id) {
-  await remove(ref(rtdb, `artikel/a${id}`));
+  return supabaseDeleteArticle(id);
 }
 
 export async function bumpArticleViews(id) {
-  const snap = await get(ref(rtdb, `artikel/a${id}`));
-  const cur = Number(snap.val()?.views || 0);
-  await update(ref(rtdb, `artikel/a${id}`), { views: cur + 1 });
+  return supabaseBumpArticleViews(id);
 }
+
+const isUnreachableHost = (hostname = "") =>
+  hostname === "localhost" ||
+  hostname === "127.0.0.1" ||
+  hostname === "0.0.0.0" ||
+  hostname.startsWith("192.168.") ||
+  hostname.startsWith("10.") ||
+  hostname.startsWith("172.");
 
 export function imageUrl(name) {
   if (!name) return "https://via.placeholder.com/600x400?text=No+Image";
-  if (/^https?:\/\//.test(name)) return name;
-  const base =
+  if (/^https?:\/\//.test(name)) {
+    try {
+      const u = new URL(name);
+      if (isUnreachableHost(u.hostname)) return `${window.location.origin}${u.pathname}`;
+    } catch {}
+    return name;
+  }
+  let base =
     import.meta.env.VITE_IMAGE_BASE_URL || import.meta.env.VITE_AI_SERVER_URL || "";
+  try {
+    if (isUnreachableHost(new URL(base).hostname)) base = window.location.origin;
+  } catch {}
   return `${base}/static/uploads/${name}`;
 }
 
@@ -163,16 +171,32 @@ export async function checkAdmin(username, password) {
   return !!a && a.username === username && a.password === password;
 }
 
-// ---- Upload gambar artikel (ke AI server local /static/uploads) ----
+// ---- Upload gambar artikel (Supabase Storage publik) ----
 export async function uploadArticleImage(file) {
-  const base = import.meta.env.VITE_AI_SERVER_URL;
-  if (!base) return null;
-  const fd = new FormData();
-  fd.append("image", file);
-  const res = await fetch(`${base}/api/upload`, { method: "POST", body: fd });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.filename) {
-    throw new Error(data.error || "Upload gagal");
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const bucket = import.meta.env.VITE_SUPABASE_BUCKET || "artikel";
+  if (!supabaseUrl || !supabaseAnonKey) return null;
+
+  const base = file.name.replace(/\.[^.]+$/, "");
+  const ext = (file.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
+  const safe = base.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${Date.now()}_${safe}${ext}`;
+  const objectPath = `${encodeURIComponent(bucket)}/${encodeURIComponent(path)}`;
+
+  const res = await fetch(`${supabaseUrl}/storage/v1/object/${objectPath}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      apikey: supabaseAnonKey,
+      "Content-Type": file.type || "application/octet-stream",
+      "x-upsert": "true",
+    },
+    body: file,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || data.error || "Upload gagal");
   }
-  return `${base}/static/uploads/${data.filename}`;
+  return `${supabaseUrl}/storage/v1/object/public/${objectPath}`;
 }
