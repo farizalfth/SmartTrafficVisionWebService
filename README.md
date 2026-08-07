@@ -1,6 +1,6 @@
 # Smart Traffic Vision Web
 
-Sistem pemantauan lalu lintas **real-time** berbasis **AI (Computer Vision)** yang memanfaatkan stream CCTV YouTube untuk mendeteksi dan menghitung kendaraan (mobil, motor, bus, truk) secara otomatis menggunakan **YOLO11**. Hasil deteksi ditulis ke **Firebase Realtime Database** dan ditampilkan oleh frontend **React + Vite**.
+Sistem pemantauan lalu lintas **real-time** berbasis **AI (Computer Vision)** yang memanfaatkan stream CCTV YouTube untuk mendeteksi dan menghitung kendaraan (mobil, motor, bus, truk) secara otomatis menggunakan **YOLO11**. Hasil deteksi ditulis ke **Firebase Realtime Database** (CCTV, statistik, komentar) dan data artikel disimpan di **Supabase** (Postgres + Storage), lalu ditampilkan oleh frontend **React + Vite**.
 
 ## Alur Sistem
 
@@ -74,6 +74,18 @@ SmartTrafficVisionWeb/
 | `/artikel/tambah` · `/artikel/edit/:id` | Tambah / edit artikel | Admin* |
 
 \* *Rute admin dilindungi `ProtectedRoute` — memerlukan login admin (`localStorage.stv_admin`).*
+
+## Teknologi
+
+| Bagian | Teknologi |
+| ------ | --------- |
+| Frontend | React + Vite, Bootstrap, Chart.js, Leaflet, react-router-dom |
+| Backend & API | Flask (Python) — REST API + AI server |
+| AI Detection | Computer Vision & YOLO11 (OpenCV, ultralytics) |
+| Firebase | Realtime Database — CCTV, traffic stats, komentar, login admin |
+| Supabase | Postgres (tabel `artikel`) + Storage bucket `Image Artikel` (gambar publik) |
+| Streaming Video | Flask MJPEG video feed (`/video_feed`) |
+| Deploy | Vercel (frontend), Render/Railway/Fly.io atau server sendiri (AI server) |
 
 ## Konfigurasi Firebase
 

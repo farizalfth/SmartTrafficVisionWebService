@@ -69,11 +69,11 @@ export default function About() {
       <h3 className="gradient-text fw-bold mb-4">Teknologi Kami</h3>
       <div className="row g-4 mb-5 justify-content-center">
         {[
+          { icon: "bi-window", t: "Frontend Web", d: "React + Vite, Bootstrap, Chart.js & Leaflet" },
           { icon: "bi-code-slash", t: "Backend & API", d: "Flask (Python) RESTful API" },
           { icon: "bi-qr-code-scan", t: "AI Detection", d: "Computer Vision & YOLO11" },
-          { icon: "bi-lightning", t: "Realtime Database", d: "Firebase Realtime Database" },
-          { icon: "bi-database", t: "Database", d: "Data disinkronkan ke Firebase" },
-          { icon: "bi-window", t: "Frontend Web", d: "React, Chart.js & Leaflet" },
+          { icon: "bi-lightning", t: "Firebase", d: "Realtime Database CCTV, statistik & komentar" },
+          { icon: "bi-database", t: "Supabase", d: "Postgres (data artikel) + Storage gambar publik" },
           { icon: "bi-camera-video", t: "Streaming Video", d: "Flask Video Feed CCTV" },
         ].map((t) => (
           <div className="col-lg-4 col-md-6" key={t.t}>
