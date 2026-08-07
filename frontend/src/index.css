@@ -202,6 +202,10 @@ a {
   transform: translateY(-5px);
   border-color: var(--accent-cyan);
 }
+.summary-card {
+  min-height: 172px;
+  gap: 8px;
+}
 @keyframes cardGlow {
   0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
   50% { box-shadow: 0 8px 40px rgba(59, 130, 246, 0.1); }
@@ -211,15 +215,19 @@ a {
   font-weight: 700;
   color: #fff;
   margin-bottom: 5px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 .summary-card .label {
   font-size: 0.9rem;
   color: var(--text-muted);
   text-transform: uppercase;
+  line-height: 1.4;
 }
 
 .icon-chip {
   --chip: #00e5ff;
+  background-color: rgba(59, 130, 246, 0.12);
   background: linear-gradient(135deg,
     color-mix(in srgb, var(--chip) 20%, transparent),
     color-mix(in srgb, var(--chip) 5%, transparent));
@@ -251,6 +259,7 @@ a {
   justify-content: center;
   font-size: 32px !important;
   color: var(--chip);
+  background-color: rgba(59, 130, 246, 0.15);
   background: linear-gradient(135deg,
     color-mix(in srgb, var(--chip) 26%, transparent),
     color-mix(in srgb, var(--chip) 8%, transparent));
@@ -1019,9 +1028,15 @@ footer {
   background: linear-gradient(145deg, #121212, #161616);
   border: 1px solid #333;
   border-radius: 16px;
-  padding: 22px;
+  padding: 20px 14px;
   text-align: center;
   height: 100%;
+  min-height: 152px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   transition: 0.3s;
 }
 .kpi-card:hover { border-color: var(--accent-cyan); transform: translateY(-4px); }
@@ -1030,13 +1045,21 @@ footer {
   font-weight: 700;
   color: #fff;
   font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 .kpi-value.is-large { font-size: 1.2rem; }
 .kpi-label {
   font-size: 0.72rem;
   color: #9aa0a6;
   text-transform: uppercase;
-  margin-top: 6px;
+  margin-top: 0;
+  line-height: 1.4;
+}
+.kpi-card .icon-chip {
+  width: 50px !important;
+  height: 50px !important;
+  margin: 0 auto !important;
 }
 
 /* Live badge blink */
@@ -1176,6 +1199,28 @@ footer {
 
 /* Menu hamburger (bawah navbar-expand-lg) */
 @media (max-width: 991.98px) {
+  /* Latar gelap saat menu terbuka — sentuh di luarnya untuk menutup */
+  .nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 1040;
+  }
+  .navbar-brand,
+  .navbar-toggler.open {
+    position: relative;
+    z-index: 1051;
+  }
+  .navbar-toggler.open {
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+  .navbar-toggler.open i {
+    font-size: 1.7rem;
+    color: #fff;
+    line-height: 1;
+    display: block;
+  }
   .navbar-collapse {
     position: absolute;
     top: calc(100% + 6px);
@@ -1213,6 +1258,10 @@ footer {
   .navbar-nav .btn-login { width: 100%; text-align: center; padding: 10px; }
 }
 
+@media (min-width: 992px) {
+  .nav-backdrop { display: none !important; }
+}
+
 @media (max-width: 768px) {
   body { padding-top: 62px; }
   .navbar { padding: 8px 0; }
@@ -1236,13 +1285,15 @@ footer {
   .comment-row .btn-kirim { width: 100%; }
 
   /* Kartu ringkasan */
-  .summary-card { padding: 18px 12px; }
+  .summary-card { padding: 18px 12px; min-height: 160px; }
   .summary-card .value { font-size: 1.7rem; }
 
   /* KPI */
-  .kpi-card { padding: 16px 10px; }
-  .kpi-value { font-size: 1.3rem; }
-  .kpi-value.is-large { font-size: 1.05rem; }
+  .kpi-card { padding: 16px 10px; min-height: 138px; gap: 6px; }
+  .kpi-card .icon-chip { width: 44px !important; height: 44px !important; }
+  .kpi-value { font-size: 1.25rem; }
+  .kpi-value.is-large { font-size: 1rem; }
+  .kpi-label { font-size: 0.66rem; }
 
   /* Jam server */
   .server-clock { padding: 12px 20px; }
@@ -1301,4 +1352,12 @@ footer {
   .kpi-value { font-size: 1.15rem; }
   .status-badge { font-size: 0.7rem; padding: 3px 9px; }
   .footer { margin-top: 30px; }
+
+  /* Badge REAL TIME di kartu tabel statistik */
+  .chart-card.position-relative > .badge {
+    position: static !important;
+    display: inline-block;
+    margin: 0 0 10px;
+  }
+  .chart-card h4 { font-size: 1.05rem; }
 }

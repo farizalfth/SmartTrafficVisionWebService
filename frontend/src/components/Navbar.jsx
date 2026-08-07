@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 export default function Navbar({ admin = false }) {
@@ -6,6 +6,15 @@ export default function Navbar({ admin = false }) {
   const [open, setOpen] = useState(false);
 
   const close = () => setOpen(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   const logout = () => {
     localStorage.removeItem("stv_admin");
@@ -39,13 +48,13 @@ export default function Navbar({ admin = false }) {
           <span className="brand-icon"><i className="bi bi-activity"></i></span> STV
         </Link>
         <button
-          className={`navbar-toggler${open ? " collapsed" : ""}`}
+          className={`navbar-toggler${open ? " open" : ""}`}
           type="button"
-          aria-label="Buka menu"
+          aria-label={open ? "Tutup menu" : "Buka menu"}
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
         >
-          <span className="navbar-toggler-icon"></span>
+          {open ? <i className="bi bi-x-lg"></i> : <span className="navbar-toggler-icon"></span>}
         </button>
         <div className={`collapse navbar-collapse justify-content-end${open ? " show" : ""}`} id="navbarNav">
           <ul className="navbar-nav align-items-center" onClick={close}>
@@ -82,6 +91,7 @@ export default function Navbar({ admin = false }) {
           </ul>
         </div>
       </div>
+      {open && <div className="nav-backdrop" onClick={close}></div>}
     </nav>
   );
 }
