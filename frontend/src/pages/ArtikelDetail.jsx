@@ -106,10 +106,6 @@ export default function ArtikelDetail() {
       </div>
 
       <div className="container" style={{ maxWidth: 820, paddingBottom: 50 }}>
-        <Link to="/read_artikel" className="btn btn-sm btn-outline-info rounded-pill mb-4 mt-3">
-          <i className="bi bi-arrow-left me-1"></i>Kembali ke Daftar Artikel
-        </Link>
-
         {/* HERO */}
         {hasCover ? (
           <div className="article-hero">

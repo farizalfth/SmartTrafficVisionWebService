@@ -54,31 +54,11 @@ const DATASET_COLORS = {
   truk: { top: "#FF7A70", bottom: "rgba(229,57,53,0.15)", border: "#E53935", hover: "#FF5252" },
 };
 
-function makeLabels(labels, datasets, period) {
-  return labels.map((label, index) => {
-    const m = datasets.mobil?.[index] || 0;
-    const mt = datasets.motor?.[index] || 0;
-    const b = datasets.bus?.[index] || 0;
-    const t = datasets.truk?.[index] || 0;
-    const total = m + mt + b + t;
-
-    if (period === "bulanan") return [label, `Σ ${total.toLocaleString("id-ID")}`];
-    if (period === "mingguan") {
-      const name = Array.isArray(label) ? label[0] : label;
-      const date = Array.isArray(label) ? label[1] : "";
-      return [name, date, `Σ ${total.toLocaleString("id-ID")}`];
-    }
-    return [
-      label,
-      "──────────",
-      `Mobil : ${m}`,
-      `Motor : ${mt}`,
-      `Bus   : ${b}`,
-      `Truk  : ${t}`,
-      "──────────",
-      `Total : ${total}`,
-    ];
-  });
+function makeLabels(labels) {
+  // Label sumbu X dibuat bersih satu baris; rincian kendaraan pindah ke tooltip.
+  return labels.map((label) =>
+    Array.isArray(label) ? label.join(" · ") : label
+  );
 }
 
 function computeMax(labels, datasets) {
@@ -94,9 +74,9 @@ function computeMax(labels, datasets) {
   return maxVal > 0 ? Math.ceil((maxVal * 1.2) / 100) * 100 : 500;
 }
 
-export function TrafficBarChart({ labels = [], datasets = {}, period = "harian", height = 650 }) {
+export function TrafficBarChart({ labels = [], datasets = {}, _period = "harian", height = 650 }) {
   const data = {
-    labels: makeLabels(labels, datasets, period),
+    labels: makeLabels(labels),
     datasets: ["mobil", "motor", "bus", "truk"].map((k) => {
       const c = DATASET_COLORS[k];
       return {
@@ -122,16 +102,29 @@ export function TrafficBarChart({ labels = [], datasets = {}, period = "harian",
           scales: {
             x: {
               stacked: true,
-              ticks: { color: "#fff", font: { size: 12 }, lineHeight: 1.5, padding: 10 },
+              ticks: {
+                color: "#fff",
+                font: { size: 11 },
+                maxRotation: 0,
+                autoSkip: false,
+                padding: 8,
+              },
               grid: { display: false },
+              border: { display: false },
             },
             y: {
               stacked: true,
               beginAtZero: true,
               min: 0,
               max: computeMax(labels, datasets),
-              ticks: { color: "#94a3b8", callback: (v) => Number(v).toLocaleString("id-ID") },
-              grid: { color: "rgba(255,255,255,0.05)" },
+              ticks: {
+                color: "#94a3b8",
+                callback: (v) => Number(v).toLocaleString("id-ID"),
+                maxTicksLimit: 6,
+                padding: 8,
+              },
+              grid: { color: "rgba(255,255,255,0.06)", drawTicks: false },
+              border: { display: false },
             },
           },
           plugins: {
@@ -139,11 +132,13 @@ export function TrafficBarChart({ labels = [], datasets = {}, period = "harian",
             tooltip: {
               ...tooltipStyle,
               callbacks: {
-                label: (ctx) => ` ${ctx.dataset.label} : ${Number(ctx.parsed.y).toLocaleString("id-ID")}`,
-                footer: (items) => {
+                title: (items) => {
+                  const label = items[0]?.label || "";
                   const total = items.reduce((s, i) => s + (Number(i.parsed.y) || 0), 0);
-                  return `──────────\nTotal : ${total.toLocaleString("id-ID")}`;
+                  return `${label} — Total ${total.toLocaleString("id-ID")}`;
                 },
+                label: (ctx) => ` ${ctx.dataset.label} : ${Number(ctx.parsed.y).toLocaleString("id-ID")}`,
+                footer: () => undefined,
               },
             },
           },
