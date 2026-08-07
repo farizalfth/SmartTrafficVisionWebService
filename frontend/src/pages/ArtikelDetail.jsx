@@ -170,8 +170,8 @@ export default function ArtikelDetail() {
           </div>
 
           {/* BAGIKAN */}
-          <div className="d-flex align-items-center mt-5 pt-4" style={{ borderTop: "1px solid #2a2a2a" }}>
-            <span className="me-3 text-muted" style={{ fontSize: "0.9rem" }}>Bagikan:</span>
+          <div className="d-flex align-items-center flex-wrap share-row mt-5 pt-4" style={{ borderTop: "1px solid #2a2a2a", gap: "8px 10px" }}>
+            <span className="me-1 text-muted share-label" style={{ fontSize: "0.9rem" }}>Bagikan:</span>
             <button className="share-btn" onClick={nativeShare} title="Bagikan melalui aplikasi lain">
               <i className="bi bi-share-fill"></i>
               <span className="ms-1" style={{ fontSize: "0.8rem" }}>Bagikan</span>
@@ -235,13 +235,18 @@ export default function ArtikelDetail() {
           color: #3B82F6;
           border-radius: 50px;
           padding: 8px 16px;
-          margin-right: 8px;
           display: inline-flex;
           align-items: center;
           cursor: pointer;
           transition: 0.3s;
+          white-space: nowrap;
         }
         .share-btn:hover { background: rgba(59,130,246,0.25); transform: translateY(-2px); }
+        @media (max-width: 576px) {
+          .share-label { flex-basis: 100%; }
+          .share-btn { padding: 6px 12px; }
+          .share-btn span { font-size: 0.75rem; }
+        }
       `}</style>
     </div>
   );

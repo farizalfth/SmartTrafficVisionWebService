@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getArticleById, saveArticle, uploadArticleImage, imageUrl } from "../lib/firebase";
+import { getArticleById, saveArticle, imageUrl } from "../lib/firebase";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://<project>.supabase.co";
 
 export default function CrudArtikel({ mode }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [form, setForm] = useState({ judul: "", tanggal: "", isi: "", gambar: "" });
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -24,29 +24,20 @@ export default function CrudArtikel({ mode }) {
     }
   }, [mode, id]);
 
-  const onFile = (e) => {
-    const f = e.target.files[0];
-    setFile(f);
-    if (f) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setPreview(ev.target.result);
-      reader.readAsDataURL(f);
-    } else {
-      setPreview(null);
-    }
-  };
-
   const submit = async (e) => {
     e.preventDefault();
+    const link = form.gambar.trim();
+    if (link && !link.startsWith("http://") && !link.startsWith("https://")) {
+      alert("Link gambar harus berupa URL yang diawali http:// atau https://");
+      return;
+    }
+    if (link && !new URL(link).origin.includes("supabase.co")) {
+      alert(`Link gambar harus dari Supabase Storage, contoh:\n${SUPABASE_URL}/storage/v1/object/public/Image Artikel/nama-file.jpg`);
+      return;
+    }
     setSaving(true);
     try {
-      let gambar = form.gambar;
-      if (file) {
-        const url = await uploadArticleImage(file);
-        if (url) gambar = url;
-        else gambar = file.name; // fallback: simpan nama file (dilayani AI server /static/uploads)
-      }
-      const payload = { ...form, gambar, published: mode === "edit" ? undefined : 0 };
+      const payload = { ...form, gambar: link, published: mode === "edit" ? undefined : 0 };
       if (mode === "edit") {
         const existing = await getArticleById(id);
         payload.published = existing?.published ?? 0;
@@ -82,17 +73,26 @@ export default function CrudArtikel({ mode }) {
                 <textarea className="form-control" rows={8} value={form.isi} onChange={(e) => setForm({ ...form, isi: e.target.value })} required />
               </div>
               <div className="mb-3">
-                <label className="form-label">Gambar Utama</label>
-                <input type="file" className="form-control" accept="image/*" onChange={onFile} />
-                <small className="text-muted">Ukuran gambar maksimal 2MB.</small>
+                <label className="form-label">Link Gambar (Supabase Storage)</label>
+                <input
+                  type="url"
+                  className="form-control"
+                  placeholder={`${SUPABASE_URL}/storage/v1/object/public/Image Artikel/nama-file.jpg`}
+                  value={form.gambar}
+                  onChange={(e) => setForm({ ...form, gambar: e.target.value })}
+                />
+                <small className="text-muted">
+                  Upload gambar ke Supabase Storage (bucket <b>Image Artikel</b>), lalu salin linknya ke sini.
+                </small>
               </div>
 
-              {(preview || form.gambar) && (
+              {form.gambar && (
                 <div className="mb-3">
-                  <label className="form-label">{preview ? "Preview Gambar Baru" : "Preview Gambar Lama"}</label>
+                  <label className="form-label">Preview Gambar</label>
                   <img
-                    src={preview || imageUrl(form.gambar)}
+                    src={imageUrl(form.gambar)}
                     alt=""
+                    onError={(e) => { e.target.style.display = "none"; }}
                     style={{ maxWidth: "100%", maxHeight: 240, borderRadius: 10, display: "block" }}
                   />
                 </div>
