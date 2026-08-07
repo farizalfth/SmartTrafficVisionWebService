@@ -275,10 +275,10 @@ export default function AdminDashboard() {
     <div className="container mt-4" style={{ paddingBottom: 50 }}>
       <h4 className="mb-3 fw-bold text-center gradient-text">Ringkasan Lalu Lintas</h4>
       <div className="row g-4 mb-5 justify-content-center">
-        <div className="col-md-3 col-sm-6"><SummaryCard icon="car" chip="#3B82F6" value={(summary.kendaraan_hari_ini || 0).toLocaleString("id-ID")} label="Total Kendaraan" /></div>
-        <div className="col-md-3 col-sm-6"><SummaryCard icon="activity" chip="#FFD600" value={`${summary.kepadatan_tertinggi || 0}%`} label="Kepadatan" /></div>
-        <div className="col-md-3 col-sm-6"><SummaryCard icon="gauge" chip="#3B82F6" value={summary.rata_rata_kecepatan || "-"} label="Rata-rata Kecepatan" /></div>
-        <div className="col-md-3 col-sm-6"><SummaryCard icon="camera" chip="#FF5252" value={summary.kamera_aktif || 0} label="Kamera Aktif" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="car" chip="#3B82F6" value={(summary.kendaraan_hari_ini || 0).toLocaleString("id-ID")} label="Total Kendaraan" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="activity" chip="#FFD600" value={`${summary.kepadatan_tertinggi || 0}%`} label="Kepadatan" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="gauge" chip="#3B82F6" value={summary.rata_rata_kecepatan || "-"} label="Rata-rata Kecepatan" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="camera" chip="#FF5252" value={summary.kamera_aktif || 0} label="Kamera Aktif" /></div>
       </div>
 
       {/* LIVE FEED & ARTIKEL */}

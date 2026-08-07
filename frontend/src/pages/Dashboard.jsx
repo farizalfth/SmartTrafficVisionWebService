@@ -95,10 +95,10 @@ export default function Dashboard() {
         </h4>
       </Reveal>
       <div className="row g-4 mb-5 justify-content-center">
-        <div className="col-md-3 col-sm-6"><SummaryCard icon="car" chip="#3B82F6" value={summary.kendaraan_hari_ini.toLocaleString("id-ID")} label="Total Kendaraan" /></div>
-        <div className="col-md-3 col-sm-6"><SummaryCard icon="activity" chip="#FFD600" value={`${summary.kepadatan_tertinggi}%`} label="Kepadatan Saat Ini" /></div>
-        <div className="col-md-3 col-sm-6"><SummaryCard icon="gauge" chip="#3B82F6" value={summary.rata_rata_kecepatan} label="Rata-rata Kecepatan" /></div>
-        <div className="col-md-3 col-sm-6"><SummaryCard icon="camera" chip="#FF5252" value={summary.kamera_aktif} label="Kamera Aktif" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="car" chip="#3B82F6" value={summary.kendaraan_hari_ini.toLocaleString("id-ID")} label="Total Kendaraan" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="activity" chip="#FFD600" value={`${summary.kepadatan_tertinggi}%`} label="Kepadatan Saat Ini" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="gauge" chip="#3B82F6" value={summary.rata_rata_kecepatan} label="Rata-rata Kecepatan" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="camera" chip="#FF5252" value={summary.kamera_aktif} label="Kamera Aktif" /></div>
       </div>
 
       {/* LIVE FEED & ARTIKEL */}
@@ -249,7 +249,7 @@ export default function Dashboard() {
                 </div>
                 <div className="col-md-8">
                   <label className="comment-label"><i className="bi bi-chat-dots me-1"></i>Tulis Ulasan / Saran</label>
-                  <div className="d-flex gap-2">
+                  <div className="d-flex gap-2 comment-row">
                     <input className="form-control form-dark flex-grow-1" value={pesan} onChange={(e) => setPesan(e.target.value)} placeholder="Tulis komentar Anda di sini..." />
                     <button type="submit" className="btn-kirim px-4">
                       <i className="bi bi-send me-1"></i> Kirim

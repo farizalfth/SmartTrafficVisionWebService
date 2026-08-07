@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 export default function Navbar({ admin = false }) {
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+
+  const close = () => setOpen(false);
 
   const logout = () => {
     localStorage.removeItem("stv_admin");
@@ -31,19 +35,20 @@ export default function Navbar({ admin = false }) {
   return (
     <nav className="navbar navbar-expand-lg navbar-dark fixed-top">
       <div className="container">
-        <Link className="navbar-brand" to="/">
+        <Link className="navbar-brand" to="/" onClick={close}>
           <span className="brand-icon"><i className="bi bi-activity"></i></span> STV
         </Link>
         <button
-          className="navbar-toggler"
+          className={`navbar-toggler${open ? " collapsed" : ""}`}
           type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
+          aria-label="Buka menu"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
         >
           <span className="navbar-toggler-icon"></span>
         </button>
-        <div className="collapse navbar-collapse justify-content-end" id="navbarNav">
-          <ul className="navbar-nav align-items-center">
+        <div className={`collapse navbar-collapse justify-content-end${open ? " show" : ""}`} id="navbarNav">
+          <ul className="navbar-nav align-items-center" onClick={close}>
             <li className="nav-item">
               <NavLink className="nav-link" to="/dashboard">
                 Dashboard
@@ -70,7 +75,7 @@ export default function Navbar({ admin = false }) {
               </NavLink>
             </li>
             <li className="nav-item ms-lg-3">
-              <Link to="/login" className="btn btn-login">
+              <Link to="/login" className="btn btn-login" onClick={close}>
                 Login Admin
               </Link>
             </li>

@@ -96,7 +96,7 @@ export default function About() {
           { initials: "BC", name: "Bening Cahya Aura" },
           { initials: "FN", name: "Fajrina Nurhaliza" },
         ].map((m) => (
-          <div className="col-lg-3 col-sm-6" key={m.initials}>
+          <div className="col-lg-3 col-sm-6 col-6" key={m.initials}>
             <div className="kpi-card" style={{ height: "100%" }}>
               <div
                 style={{
