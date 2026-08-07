@@ -109,7 +109,11 @@ export default function StaticPage() {
             <p className="text-secondary text-center">
               {selText} • {PERIOD_INFO[period]} • Update {time}
             </p>
-            <TrafficBarChart labels={traffic.labels} datasets={traffic.datasets} period={period} height={460} />
+            <div className="chart-scroll-wrap">
+              <div className="chart-scroll-inner">
+                <TrafficBarChart labels={traffic.labels} datasets={traffic.datasets} period={period} height={460} />
+              </div>
+            </div>
           </div>
         </div>
       </div>

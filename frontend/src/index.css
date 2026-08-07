@@ -1361,3 +1361,10 @@ footer {
   }
   .chart-card h4 { font-size: 1.05rem; }
 }
+
+/* Scroll horizontal grafik analitik agar label X tidak mepet di layar sempit */
+.chart-scroll-wrap { width: 100%; overflow-x: auto; }
+.chart-scroll-inner { min-width: 100%; }
+@media (max-width: 576px) {
+  .chart-scroll-inner { min-width: 540px; }
+}

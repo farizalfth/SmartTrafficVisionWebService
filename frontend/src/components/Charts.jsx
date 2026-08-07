@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Chart as ChartJS,
   BarElement,
@@ -71,10 +72,22 @@ function computeMax(labels, datasets) {
       (datasets.truk?.[i] || 0);
     if (total > maxVal) maxVal = total;
   });
-  return maxVal > 0 ? Math.ceil((maxVal * 1.2) / 100) * 100 : 500;
+  return maxVal > 0 ? Math.ceil((maxVal * 1.25) / 100) * 100 : 500;
 }
 
 export function TrafficBarChart({ labels = [], datasets = {}, _period = "harian", height = 650 }) {
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const isSmall = vw <= 576;
+  const chartHeight = isSmall ? Math.max(height, 420) : height;
+  const xFont = isSmall
+    ? labels.length > 6 ? 9 : 10
+    : labels.length > 10 ? 10 : labels.length > 6 ? 11 : 12;
+
   const data = {
     labels: makeLabels(labels),
     datasets: ["mobil", "motor", "bus", "truk"].map((k) => {
@@ -92,16 +105,14 @@ export function TrafficBarChart({ labels = [], datasets = {}, _period = "harian"
     }),
   };
 
-  const xFont = labels.length > 10 ? 10 : labels.length > 6 ? 11 : 12;
-
   return (
-    <div style={{ height: `${height}px`, position: "relative", width: "100%" }}>
+    <div style={{ height: `${chartHeight}px`, position: "relative", width: "100%" }}>
       <Bar
         data={data}
         options={{
           responsive: true,
           maintainAspectRatio: false,
-          layout: { padding: { top: 10, right: 8, bottom: 4, left: 4 } },
+          layout: { padding: { top: 12, right: 10, bottom: 8, left: 6 } },
           scales: {
             x: {
               stacked: true,
@@ -111,7 +122,7 @@ export function TrafficBarChart({ labels = [], datasets = {}, _period = "harian"
                 maxRotation: 0,
                 minRotation: 0,
                 autoSkip: false,
-                padding: 6,
+                padding: 8,
               },
               grid: { display: false },
               border: { display: false },
@@ -124,8 +135,8 @@ export function TrafficBarChart({ labels = [], datasets = {}, _period = "harian"
               ticks: {
                 color: "#94a3b8",
                 callback: (v) => Number(v).toLocaleString("id-ID"),
-                maxTicksLimit: 6,
-                padding: 6,
+                maxTicksLimit: 5,
+                padding: 10,
               },
               grid: { color: "rgba(255,255,255,0.06)", drawTicks: false },
               border: { display: false },
