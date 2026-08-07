@@ -917,7 +917,8 @@
             <h4 class="fw-bold text-white mb-0 gradient-text">Statistik & Analitik</h4>
             <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 250px;"
                 id="chartCctvSelect">
-                <option value="">Semua Data CCTV</option>
+                <option value="" selected disabled>Pilih CCTV</option>
+                <option value="all">Semua Data CCTV</option>
             </select>
         </div>
 
@@ -1578,13 +1579,16 @@
             // Variable global untuk menyimpan ID CCTV yang sedang aktif
 
             function fetchSummary(id) {
-                if (!id) return; // Jangan panggil jika ID kosong
+                // id kosong = "Semua Data CCTV" -> backend otomatis agregasi semua kamera
+                let url = `/api/admin/dashboard_summary`;
+                if (id) url += `?cctv_id=${id}`;
 
-                fetch(`/api/admin/dashboard_summary?cctv_id=${id}`)
+                fetch(url)
                     .then(res => res.json())
                     .then(data => {
                         // Update elemen HTML berdasarkan ID-nya
                         document.getElementById('kendaraanHariIni').innerText = data.kendaraan_hari_ini;
+                        document.getElementById('kepadatanTertinggi').innerText = (data.kepadatan_tertinggi || 0) + "%";
                         document.getElementById('rataRataKecepatan').innerText = data.rata_rata_kecepatan;
                         document.getElementById('kameraAktif').innerText = data.kamera_aktif;
                     })
@@ -1594,15 +1598,16 @@
             // --- LOGIKA UPDATE OTOMATIS (REAL-TIME POLLING) ---
             setInterval(() => {
                 // 1. Ambil ID dari dropdown Statistik & Analitik (Diagram Batang & Lingkaran)
+                // ID kosong ("") berarti "Semua Data CCTV"
                 const selectedId = document.getElementById('chartCctvSelect').value;
 
                 // Update Grafik Batang (Data History)
                 // Data ini tetap muncul meski CCTV OFF karena mengambil dari riwayat Firebase
-                fetchTrafficChart(chartCctvId, 'harian');
+                fetchTrafficChart(selectedId, trafficPeriod);
 
                 // Update Grafik Lingkaran (Data Cumulative)
                 // Menampilkan perbandingan kendaraan yang pernah terdeteksi (tidak akan nol)
-                fetchVehicleChart(chartCctvId, 'harian');
+                fetchVehicleChart(selectedId, 'harian');
 
                 // 2. Ambil ID dari dropdown Live Feed (Kartu Ringkasan Atas)
                 const summaryCctvId = document.getElementById('cctvSelect').value;
@@ -1627,7 +1632,11 @@
             }
 
             function fetchTrafficChart(id, period) {
-                let url = `/api/admin/traffic_data?cctv_id=${id}`;
+                // "Pilih CCTV" (placeholder) -> belum ada pilihan
+                if (!id) return;
+                // "Semua Data CCTV" -> id kosong, backend otomatis agregasi semua kamera
+                const apiCctvId = id === 'all' ? '' : id;
+                let url = `/api/admin/traffic_data?cctv_id=${apiCctvId}`;
 
                 fetch(url)
                     .then(res => res.json())
@@ -1729,9 +1738,11 @@
             }
 
             function fetchVehicleChart(id, period) {
-                // Jika id kosong, Flask akan menganggap "Semua Data CCTV"
+                // "Pilih CCTV" (placeholder) -> belum ada pilihan
+                if (!id) return;
+                // "Semua Data CCTV" (id="all") -> jangan kirim cctv_id, backend agregasi
                 let url = `/api/admin/vehicle_distribution?period=${period}`;
-                if (id) url += `&cctv_id=${id}`;
+                if (id !== 'all') url += `&cctv_id=${id}`;
 
                 fetch(url)
                     .then(res => res.json())
@@ -1905,18 +1916,25 @@
                     list.innerHTML = '<div class="text-muted small text-center py-2">Belum ada data CCTV</div>';
                     return;
                 }
-                list.innerHTML = signals.map(c => `
+                list.innerHTML = signals.map(c => {
+                    const online = !!c.online;
+                    const hasSignal = online && c.signal > 0;
+                    const fillW = online ? (hasSignal ? c.signal : 15) : 8;
+                    const valueText = online ? (hasSignal ? c.signal + '%' : '—') : 'OFF';
+                    const tip = c.name + (c.latency != null ? ` • Latensi ${c.latency} ms` : '');
+                    return `
                     <div class="cctv-signal-item">
-                        <span class="cctv-signal-dot ${c.online ? 'online' : 'offline'}"></span>
-                        <span class="cctv-signal-name" title="${c.name}">${c.name}</span>
+                        <span class="cctv-signal-dot ${online ? 'online' : 'offline'}"></span>
+                        <span class="cctv-signal-name" title="${tip}">${c.name}</span>
                         <span class="cctv-signal-bar">
-                            <span class="cctv-signal-fill ${c.online ? 'online' : 'offline'}"
-                                style="width: ${c.online ? c.signal : 8}%;"></span>
+                            <span class="cctv-signal-fill ${online ? 'online' : 'offline'}"
+                                style="width: ${fillW}%;"></span>
                         </span>
-                        <span class="cctv-signal-value ${c.online ? '' : 'offline-text'}">
-                            ${c.online ? c.signal + '%' : 'OFF'}
+                        <span class="cctv-signal-value ${online ? '' : 'offline-text'}">
+                            ${valueText}
                         </span>
-                    </div>`).join('');
+                    </div>`;
+                }).join('');
             }
 
             function updateServerStatus() {
@@ -1980,7 +1998,11 @@
             tickServerClock();
 
             function fetchTrafficChart(id, period = 'harian') {
-                let url = `/api/admin/traffic_data?cctv_id=${id}&period=${period}`;
+                // "Pilih CCTV" (placeholder) -> belum ada pilihan
+                if (!id) return;
+                // "Semua Data CCTV" -> id kosong, backend otomatis agregasi semua kamera
+                const apiCctvId = id === 'all' ? '' : id;
+                let url = `/api/admin/traffic_data?cctv_id=${apiCctvId}&period=${period}`;
 
                 fetch(url)
                     .then(res => res.json())

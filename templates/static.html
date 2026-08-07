@@ -98,12 +98,18 @@
     }
 
     .kpi-value {
-      font-size: 1.5rem;
+      font-size: clamp(1.05rem, 3vw, 1.5rem);
       font-weight: 700;
       color: #fff;
       line-height: 1.2;
       font-variant-numeric: tabular-nums;
-      white-space: nowrap;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    /* Angka KPI yang sangat besar (contoh: total bulanan/tahunan) tidak terpotong */
+    .kpi-value.is-large {
+      font-size: clamp(0.9rem, 2.4vw, 1.25rem);
     }
 
     .kpi-label {
@@ -251,8 +257,9 @@
     <div class="row justify-content-center mb-4 reveal">
       <div class="col-md-6">
         <select class="form-select text-center py-2" id="cctvSelect">
-          <option value="">-- Pilih CCTV --</option>
-          <!-- Opsi akan diisi Javascript -->
+          <option value="" selected disabled>Pilih CCTV</option>
+          <option value="all">Semua Data CCTV</option>
+          <!-- Opsi CCTV akan diisi Javascript -->
         </select>
       </div>
     </div>
@@ -310,9 +317,42 @@
     <div class="row justify-content-center reveal">
       <div class="col-lg-10">
         <div class="chart-card">
-          <h4 id="chartTitle">Laporan Kendaraan Harian</h4>
-          <div style="position: relative; height: 550px; width: 100%;"> <!-- Height diperbesar agar label muat -->
+          <h4 id="chartTitle">Laporan Kendaraan</h4>
+          <p class="text-secondary small mb-4" id="chartSubtitle" style="text-align: center;">Pilih CCTV untuk melihat data.</p>
+          <div id="chartWrapper" style="position: relative; height: 460px; width: 100%;">
             <canvas id="trafficChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE DETAIL KENDARAAN (REAL TIME) -->
+    <div class="row justify-content-center reveal mt-5">
+      <div class="col-lg-10">
+        <div class="chart-card position-relative">
+          <span class="badge rounded-pill text-dark position-absolute"
+            style="background-color: #0dcaf0; font-size: 0.7rem; padding: 6px 15px; top: 30px; right: 30px;">REAL TIME</span>
+          <h4 class="mb-4">Tabel Detail Kendaraan</h4>
+          <div class="table-responsive" style="max-height: 420px; overflow-y: auto; border-radius: 10px;">
+            <table class="table table-dark table-striped align-middle mb-0"
+              style="font-size: 0.85rem; border-color: #333;">
+              <thead style="position: sticky; top: 0; background: #1a1a1a; z-index: 2;">
+                <tr>
+                  <th>Periode</th>
+                  <th class="text-end">Mobil</th>
+                  <th class="text-end">Motor</th>
+                  <th class="text-end">Bus</th>
+                  <th class="text-end">Truk</th>
+                  <th class="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody id="trafficTableBody">
+                <tr>
+                  <td colspan="6" class="text-center text-muted py-4">Pilih CCTV untuk melihat detail kendaraan.</td>
+                </tr>
+              </tbody>
+              <tfoot id="trafficTableFoot"></tfoot>
+            </table>
           </div>
         </div>
       </div>
@@ -334,7 +374,7 @@
 
     // Global Vars
     let trafficChartInstance = null;
-    let currentCctvId = null;
+    let currentCctvId = ''; // '' = Semua Data CCTV
     let currentPeriod = 'harian';
 
     // Scroll Reveal
@@ -366,10 +406,9 @@
         updateChart();
       });
 
-      // 3. Polling Real-time (Sama dengan Admin)
-      setInterval(() => {
-        if (currentCctvId) updateChart();
-      }, 5000);
+      // 3. Polling Real-time (Sama dengan Admin) — selalu berjalan,
+      //    termasuk saat pilihan "Semua Data CCTV"
+      setInterval(updateChart, 5000);
     });
 
     function changePeriod(period, btnElement) {
@@ -380,37 +419,21 @@
     }
 
     function updateChart() {
+      // "Pilih CCTV" (placeholder) -> belum ada pilihan, jangan fetch
       if (!currentCctvId) return;
 
-      // Ambil data dari API Public (Pastikan backend sudah return datasets mobil, motor, dll)
-      fetch(`/api/public/traffic_data?cctv_id=${currentCctvId}&period=${currentPeriod}`)
+      // "Semua Data CCTV" -> id kosong, backend otomatis agregasi semua kamera
+      const apiId = currentCctvId === 'all' ? '' : currentCctvId;
+
+      // Ambil data dari API Public.
+      fetch(`/api/public/traffic_data?cctv_id=${apiId}&period=${currentPeriod}`)
         .then(response => response.json())
         .then(data => {
           if (!data.datasets) return;
 
-          // LOGIKA MULTI-LINE LABELS (Tanggal + Angka) - hanya untuk data irit (harian/mingguan)
-          // Bulanan (12 label) tetap label singkat agar rapi, detail lewat tooltip
-          const isMulti = data.labels.length <= 7;
-          const chartLabels = isMulti
-            ? data.labels.map((label, index) => {
-                const m = data.datasets.mobil[index] || 0;
-                const mt = data.datasets.motor[index] || 0;
-                const b = data.datasets.bus[index] || 0;
-                const t = data.datasets.truk[index] || 0;
-                const total = m + mt + b + t;
-
-                return [
-                  label,              // Baris 1: 13 Jan
-                  "──────────",        // Baris 2: Garis
-                  `Mobil : ${m}`,     // Baris 3
-                  `Motor : ${mt}`,    // Baris 4
-                  `Bus   : ${b}`,     // Baris 5
-                  `Truk  : ${t}`,     // Baris 6
-                  "──────────",        // Baris 7
-                  `Total : ${total}`   // Baris 8
-                ];
-              })
-            : data.labels;
+          // Label sumbu X ringkas (Mingguan berupa array -> dirender multi-baris otomatis).
+          // Detail angka dipindah ke tabel realtime di bawah grafik.
+          const chartLabels = data.labels;
 
           // ===== HITUNG KPI =====
           const keys = ['mobil', 'motor', 'bus', 'truk'];
@@ -452,6 +475,9 @@
           document.getElementById('kpiTopCat').innerText =
             maxCatVal > 0 ? `${maxCatName} (${maxCatVal.toLocaleString('id-ID')})` : '-';
 
+          // Kecilkan angka KPI jika terlalu besar agar tidak terpotong
+          document.getElementById('kpiTotal').classList.toggle('is-large', grandTotal >= 100000);
+
           // Judul kartu sesuai periode
           const titles = {
             harian: 'Laporan Kendaraan 7 Hari Terakhir',
@@ -460,7 +486,20 @@
           };
           document.getElementById('chartTitle').innerText = titles[currentPeriod] || 'Laporan Kendaraan';
 
+          // Sub-judul: sumber data + periode + waktu update
+          const sel = document.getElementById('cctvSelect');
+          const selText = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : 'Semua Data CCTV';
+          const periodInfo = {
+            harian: '7 Hari Terakhir',
+            mingguan: 'Mingguan (Bulan Berjalan)',
+            bulanan: '12 Bulan ' + new Date().getFullYear()
+          };
+          const timeStr = new Date().toLocaleTimeString('id-ID', { hour12: false });
+          document.getElementById('chartSubtitle').innerText =
+            `${selText} • ${periodInfo[currentPeriod] || ''} • Update ${timeStr}`;
+
           renderTrafficChart(chartLabels, data.datasets);
+          renderTrafficTable(data.labels, data.datasets);
         });
     }
 
@@ -473,13 +512,59 @@
       return g;
     }
 
+    // Plugin: menampilkan angka total di atas setiap kelompok batang
+    const barTotalLabels = {
+      id: 'barTotalLabels',
+      afterDatasetsDraw(chart) {
+        if (chart.config.type !== 'bar') return;
+        const meta = chart.getDatasetMeta(0);
+        if (!meta.data.length) return;
+
+        const { ctx } = chart;
+        const datasets = chart.data.datasets;
+        const labels = chart.data.labels;
+        const xScale = chart.scales.x;
+        const yScale = chart.scales.y;
+
+        ctx.save();
+        ctx.font = '600 11px Poppins, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = '#d7d7d7';
+
+        for (let i = 0; i < labels.length; i++) {
+          let total = 0;
+          datasets.forEach(ds => { total += Number(ds.data[i]) || 0; });
+          if (total <= 0) continue;
+          const x = xScale.getPixelForValue(i);
+          const y = yScale.getPixelForValue(total);
+          ctx.fillText(total.toLocaleString('id-ID'), x, y - 5);
+        }
+        ctx.restore();
+      }
+    };
+
     function renderTrafficChart(labels, datasets) {
       const ctx = document.getElementById('trafficChart').getContext('2d');
       if (trafficChartInstance) trafficChartInstance.destroy();
 
       // Ketebalan batang menyesuaikan jumlah data (bulanan=12 batang -> lebih ramping)
       const groupCount = labels.length;
-      const barThickness = groupCount > 10 ? 14 : (groupCount > 6 ? 22 : 40);
+      const barThickness = groupCount > 10 ? 16 : (groupCount > 6 ? 22 : 40);
+
+      // Tinggi grafik disesuaikan (label kini ringkas, detail ada di tabel)
+      const wrapper = document.getElementById('chartWrapper');
+      if (wrapper) {
+        wrapper.style.height = groupCount > 10 ? '500px' : '460px';
+      }
+
+      // Ruang kepala di sumbu Y agar teks total di atas batang selalu terlihat
+      const allTotals = labels.map((_, i) =>
+        (Number(datasets.mobil[i]) || 0) + (Number(datasets.motor[i]) || 0) +
+        (Number(datasets.bus[i]) || 0) + (Number(datasets.truk[i]) || 0)
+      );
+      const maxVal = Math.max(...allTotals);
+      const chartMax = maxVal > 0 ? Math.ceil((maxVal * 1.2) / 100) * 100 : 500;
 
       trafficChartInstance = new Chart(ctx, {
         type: 'bar',
@@ -531,6 +616,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          layout: { padding: { top: 28 } },
           animation: {
             duration: 800,
             easing: 'easeOutQuart',
@@ -550,6 +636,7 @@
               stacked: true,
               beginAtZero: true,
               min: 0,
+              max: chartMax,
               ticks: { color: '#888' },
               grid: { color: 'rgba(255,255,255,0.05)' }
             }
@@ -588,8 +675,55 @@
               }
             }
           }
-        }
+        },
+        plugins: [barTotalLabels]
       });
+    }
+
+    // Tabel detail kendaraan (REAL TIME) — data sama dengan grafik, auto-refresh tiap 5 detik
+    function renderTrafficTable(labels, datasets) {
+      const tbody = document.getElementById('trafficTableBody');
+      const tfoot = document.getElementById('trafficTableFoot');
+      if (!tbody || !tfoot) return;
+
+      let sumMobil = 0, sumMotor = 0, sumBus = 0, sumTruk = 0, grandTotal = 0;
+      let rows = '';
+
+      labels.forEach((label, i) => {
+        const m = Number(datasets.mobil[i]) || 0;
+        const mt = Number(datasets.motor[i]) || 0;
+        const b = Number(datasets.bus[i]) || 0;
+        const t = Number(datasets.truk[i]) || 0;
+        const total = m + mt + b + t;
+
+        sumMobil += m;
+        sumMotor += mt;
+        sumBus += b;
+        sumTruk += t;
+        grandTotal += total;
+
+        const labelText = Array.isArray(label) ? label.join(' · ') : label;
+        rows += `<tr>
+          <td class="text-info fw-semibold">${labelText}</td>
+          <td class="text-end">${m.toLocaleString('id-ID')}</td>
+          <td class="text-end">${mt.toLocaleString('id-ID')}</td>
+          <td class="text-end">${b.toLocaleString('id-ID')}</td>
+          <td class="text-end">${t.toLocaleString('id-ID')}</td>
+          <td class="text-end fw-bold text-white">${total.toLocaleString('id-ID')}</td>
+        </tr>`;
+      });
+
+      tbody.innerHTML = rows ||
+        `<tr><td colspan="6" class="text-center text-muted py-4">Belum ada data.</td></tr>`;
+
+      tfoot.innerHTML = `<tr class="fw-bold" style="border-top: 2px solid #0dcaf0;">
+        <td class="text-white">Total</td>
+        <td class="text-end">${sumMobil.toLocaleString('id-ID')}</td>
+        <td class="text-end">${sumMotor.toLocaleString('id-ID')}</td>
+        <td class="text-end">${sumBus.toLocaleString('id-ID')}</td>
+        <td class="text-end">${sumTruk.toLocaleString('id-ID')}</td>
+        <td class="text-end text-info">${grandTotal.toLocaleString('id-ID')}</td>
+      </tr>`;
     }
   </script>
 </body>

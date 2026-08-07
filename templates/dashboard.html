@@ -592,7 +592,8 @@
             <h4 class="fw-bold text-white mb-0 gradient-text">Statistik & Analitik</h4>
             <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 250px;"
                 id="chartCctvSelect">
-                <option value="">Semua Data CCTV</option>
+                <option value="" selected disabled>Pilih CCTV</option>
+                <option value="all">Semua Data CCTV</option>
             </select>
         </div>
 
@@ -808,14 +809,13 @@
                 });
 
                 // --- LOGIKA REAL-TIME POLLING (GABUNGAN) ---
-                // Menjalankan semua update (Ringkasan & Grafik) dalam satu waktu setiap 3 detik
+                // Menjalankan semua update (Ringkasan & Grafik) dalam satu waktu setiap 3 detik.
+                // Tanpa guard: "Semua Data CCTV" (id kosong) ikut diupdate otomatis.
                 setInterval(() => {
                     const chartId = document.getElementById('chartCctvSelect').value;
-                    if (chartId) {
-                        // Gunakan trafficPeriod yang sedang terpilih (harian/mingguan/bulanan)
-                        fetchTrafficChart(chartId, trafficPeriod);
-                        fetchVehicleChart(chartId, 'harian');
-                    }
+                    // Gunakan trafficPeriod yang sedang terpilih (harian/mingguan/bulanan)
+                    fetchTrafficChart(chartId, trafficPeriod);
+                    fetchVehicleChart(chartId, 'harian');
 
                     const summaryId = document.getElementById('cctvSelect').value;
                     fetchSummary(summaryId);
@@ -888,11 +888,10 @@
             // Perbarui bagian setInterval (Polling) agar tetap di periode yang sama
             setInterval(() => {
                 const chartId = document.getElementById('chartCctvSelect').value;
-                if (chartId) {
-                    // Gunakan trafficPeriod agar jika sedang di mode 'Bulan', tidak balik ke 'Hari' otomatis
-                    fetchTrafficChart(chartId, trafficPeriod);
-                    fetchVehicleChart(chartId, 'harian');
-                }
+                // Tanpa guard: "Semua Data CCTV" (id kosong) ikut diupdate otomatis
+                // Gunakan trafficPeriod agar jika sedang di mode 'Bulan', tidak balik ke 'Hari' otomatis
+                fetchTrafficChart(chartId, trafficPeriod);
+                fetchVehicleChart(chartId, 'harian');
 
                 const summaryId = document.getElementById('cctvSelect').value;
                 fetchSummary(summaryId);
@@ -905,9 +904,11 @@
             // --- CHART GENERATORS ---
 
             function fetchTrafficChart(id, period) {
-                if (!id) return; // Jangan panggil jika ID kosong
-
-                let url = `/api/public/traffic_data?cctv_id=${id}`;
+                // "Pilih CCTV" (placeholder) -> belum ada pilihan
+                if (!id) return;
+                // "Semua Data CCTV" -> id kosong, backend otomatis agregasi semua kamera
+                const apiCctvId = id === 'all' ? '' : id;
+                let url = `/api/public/traffic_data?cctv_id=${apiCctvId}`;
 
                 fetch(url)
                     .then(res => res.json())
@@ -1021,7 +1022,9 @@
             };
 
             function fetchVehicleChart(id, period) {
-                let url = `/api/public/vehicle_distribution?cctv_id=${id}&period=${period}`;
+                if (!id) return;
+                const apiCctvId = id === 'all' ? '' : id;
+                let url = `/api/public/vehicle_distribution?cctv_id=${apiCctvId}&period=${period}`;
 
                 fetch(url)
                     .then(res => res.json())
@@ -1083,7 +1086,9 @@
 
             function fetchVehicleChart(id, period) {
                 // Gunakan endpoint API PUBLIC
-                let url = `/api/public/vehicle_distribution?cctv_id=${id}&period=${period}`;
+                if (!id) return;
+                const apiCctvId = id === 'all' ? '' : id;
+                let url = `/api/public/vehicle_distribution?cctv_id=${apiCctvId}&period=${period}`;
 
                 fetch(url)
                     .then(res => res.json())
@@ -1155,10 +1160,12 @@
             }
 
             function fetchTrafficChart(id, period = 'harian') {
+                // "Pilih CCTV" (placeholder) -> belum ada pilihan
                 if (!id) return;
-
+                // "Semua Data CCTV" -> id kosong, backend otomatis agregasi semua kamera
+                const apiCctvId = id === 'all' ? '' : id;
                 // PENTING: Menambahkan parameter &period= agar backend tahu data apa yang harus dikirim
-                let url = `/api/public/traffic_data?cctv_id=${id}&period=${period}`;
+                let url = `/api/public/traffic_data?cctv_id=${apiCctvId}&period=${period}`;
 
                 fetch(url)
                     .then(res => res.json())

@@ -16,6 +16,10 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 import calendar
 from flask import request, jsonify
+import re
+import requests
+from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urlparse, parse_qs
 
 # ===== FIREBASE INTEGRATION =====
 import firebase_admin
@@ -418,10 +422,53 @@ def logic_get_summary(cctv_id):
 def get_firebase_logic_summary(cctv_id):
     """Mengambil ringkasan data HARI INI dengan status berdasarkan persentase (%)"""
     
+    # "all" / "" / None = "Semua Data CCTV"
+    if cctv_id in ('', 'all'):
+        cctv_id = None
+
     # 1. Dapatkan tanggal hari ini
     today_str = datetime.now().strftime("%Y-%m-%d")
     
     if not cctv_id:
+        # === "SEMUA DATA CCTV": Agregasi real-time dari semua kamera ===
+        try:
+            ref_all = _get_traffic_nodes(None)
+            today_key = datetime.now().strftime("%Y-%m-%d")
+            total_hari_ini = 0
+            sum_kepadatan = 0
+            cam_count = 0
+
+            for cctv_key, cctv_data in ref_all.items():
+                live = cctv_data.get('live', {}) or {}
+                daily = (cctv_data.get('daily_reports', {}) or {}).get(today_key, {}) or {}
+                total_hari_ini += daily.get('total_hari_ini', live.get('total_akumulasi_hari_ini', 0))
+                sum_kepadatan += live.get('kepadatan_persen', 0)
+                cam_count += 1
+
+            kepadatan_avg = int(sum_kepadatan / cam_count) if cam_count else 0
+
+            if kepadatan_avg < 40:
+                status_txt = "Lancar"
+            elif kepadatan_avg <= 75:
+                status_txt = "Padat"
+            else:
+                status_txt = "Macet"
+
+            if cam_count and kepadatan_avg > 0:
+                kecepatan_int = max(10, 80 - int(kepadatan_avg * 0.8))
+            else:
+                kecepatan_int = 80
+
+            return {
+                "kendaraan_hari_ini": total_hari_ini,
+                "kepadatan_tertinggi": kepadatan_avg,
+                "rata_rata_kecepatan": f"{kecepatan_int} km/j",
+                "status": status_txt,
+                "kamera_aktif": len(fetch_cctv_list())
+            }
+        except Exception as e:
+            print(f"Firebase Summary (Semua CCTV) Error: {e}")
+
         return {
             "kendaraan_hari_ini": 0, 
             "kepadatan_tertinggi": 0, 
@@ -552,6 +599,110 @@ def get_firebase_logic_history(cctv_id, period):
         print(f"Error History Logic: {e}")
         return {"labels": [], "data": []}
 
+def _get_traffic_nodes(cctv_id):
+    """Ambil node traffic_stats dalam bentuk dict {cctv_id: {live, daily_reports}}.
+
+    Firebase menyimpan data bisa berupa dict (key = id cctv) atau list
+    (index 0 = null, index 1..n = data cctv). Fungsi ini menormalkan keduanya.
+    """
+    # "all" / "" / None = "Semua Data CCTV"
+    if cctv_id in ('', 'all'):
+        cctv_id = None
+
+    traffic_ref = firebase_db.reference('traffic_stats')
+
+    if cctv_id:
+        node = traffic_ref.child(str(cctv_id)).get()
+        return {str(cctv_id): node or {}}
+
+    raw = traffic_ref.get() or {}
+    nodes = {}
+    if isinstance(raw, list):
+        for idx, item in enumerate(raw):
+            if isinstance(item, dict):
+                nodes[str(idx)] = item
+    elif isinstance(raw, dict):
+        nodes = raw
+    return nodes
+
+def build_traffic_data(cctv_id, period):
+    """Bangun data grafik batang kendaraan untuk Dashboard.
+
+    - Jika cctv_id diberikan -> data khusus CCTV tersebut.
+    - Jika kosong/None      -> agregasi dari SEMUA CCTV.
+    """
+    now = datetime.now()
+    curr_year = now.year
+    curr_month = now.month
+    month_name = now.strftime('%B')
+
+    labels = []
+    data_mobil, data_motor, data_bus, data_truk = [], [], [], []
+
+    # Sumber data: SEMUA CCTV (agregat) atau satu CCTV tertentu
+    nodes = _get_traffic_nodes(cctv_id)
+
+    if period == 'harian':
+        # LOGIKA: 7 Hari Terakhir
+        for i in range(6, -1, -1):
+            date_key = (now - timedelta(days=i)).strftime('%Y-%m-%d')
+            labels.append(datetime.strptime(date_key, "%Y-%m-%d").strftime("%d %b"))
+
+            m = mt = b = t = 0
+            for node in nodes.values():
+                det = node.get('daily_reports', {}).get(date_key, {}).get('detail', {})
+                m += det.get('mobil', 0)
+                mt += det.get('motor', 0)
+                b += det.get('bus', 0)
+                t += det.get('truk', 0)
+            data_mobil.append(m); data_motor.append(mt); data_bus.append(b); data_truk.append(t)
+
+    elif period == 'mingguan':
+        # LOGIKA: Pembagian Tetap 1-7, 8-14, 15-21, 22-Akhir Bulan
+        last_day = calendar.monthrange(curr_year, curr_month)[1]
+        ranges = [(1, 7), (8, 14), (15, 21), (22, last_day)]
+
+        for i, (start, end) in enumerate(ranges):
+            labels.append([f"Minggu {i+1}", f"{start}-{end} {month_name[:3]}"])
+            m = mt = b = t = 0
+            for node in nodes.values():
+                daily = node.get('daily_reports', {}) or {}
+                for day in range(start, end + 1):
+                    date_key = f"{curr_year}-{str(curr_month).zfill(2)}-{str(day).zfill(2)}"
+                    det = daily.get(date_key, {}).get('detail', {})
+                    m += det.get('mobil', 0)
+                    mt += det.get('motor', 0)
+                    b += det.get('bus', 0)
+                    t += det.get('truk', 0)
+            data_mobil.append(m); data_motor.append(mt); data_bus.append(b); data_truk.append(t)
+
+    elif period == 'bulanan':
+        # LOGIKA: 12 Bulan (Jan - Des) Tahun Berjalan
+        month_list = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+        for i, m_short in enumerate(month_list):
+            labels.append(m_short)
+            month_prefix = f"{curr_year}-{str(i+1).zfill(2)}"
+            m = mt = b = t = 0
+            for node in nodes.values():
+                for date_key, val in (node.get('daily_reports', {}) or {}).items():
+                    if date_key.startswith(month_prefix):
+                        det = val.get('detail', {})
+                        m += det.get('mobil', 0)
+                        mt += det.get('motor', 0)
+                        b += det.get('bus', 0)
+                        t += det.get('truk', 0)
+            data_mobil.append(m); data_motor.append(mt); data_bus.append(b); data_truk.append(t)
+
+    return {
+        "labels": labels,
+        "datasets": {
+            "mobil": data_mobil,
+            "motor": data_motor,
+            "bus": data_bus,
+            "truk": data_truk
+        }
+    }
+
 # =========================================================================
 # --- ROUTE API (ADMIN & PUBLIC SUDAH DISINKRONKAN) ---
 # =========================================================================
@@ -568,90 +719,12 @@ def api_public_dashboard_summary():
 
 @app.route('/api/public/traffic_data')
 def api_public_traffic_data():
-    cctv_id = request.args.get('cctv_id')
+    cctv_id = request.args.get('cctv_id') or None
     period = request.args.get('period', 'harian') # Ambil parameter period
-    
-    if not cctv_id:
-        return jsonify({"labels": [], "datasets": {"mobil":[], "motor":[], "bus":[], "truk":[]}})
 
     try:
-        ref = firebase_db.reference(f'traffic_stats/{cctv_id}/daily_reports')
-        # Ambil semua data untuk diproses agregasinya (Mingguan/Bulanan butuh data lebih dari 7 hari)
-        all_data = ref.get() or {}
-        
-        now = datetime.now()
-        curr_year = now.year
-        curr_month = now.month
-        month_name = now.strftime('%B')
-
-        labels = []
-        data_mobil, data_motor, data_bus, data_truk = [], [], [], []
-
-        if period == 'harian':
-            # LOGIKA: 7 Hari Terakhir
-            for i in range(6, -1, -1):
-                date_key = (now - timedelta(days=i)).strftime('%Y-%m-%d')
-                labels.append(datetime.strptime(date_key, "%Y-%m-%d").strftime("%d %b"))
-                
-                det = all_data.get(date_key, {}).get('detail', {})
-                data_mobil.append(det.get('mobil', 0))
-                data_motor.append(det.get('motor', 0))
-                data_bus.append(det.get('bus', 0))
-                data_truk.append(det.get('truk', 0))
-
-        elif period == 'mingguan':
-            # LOGIKA: Pembagian Tetap 1-7, 8-14, 15-21, 22-Akhir Bulan
-            last_day = calendar.monthrange(curr_year, curr_month)[1]
-            ranges = [(1, 7), (8, 14), (15, 21), (22, last_day)]
-            
-            for i, (start, end) in enumerate(ranges):
-                labels.append([f"Minggu {i+1}", f"{start}-{end} {month_name[:3]}"])
-                
-                sum_mobil = sum_motor = sum_bus = sum_truk = 0
-                for d in range(start, end + 1):
-                    date_key = f"{curr_year}-{str(curr_month).zfill(2)}-{str(d).zfill(2)}"
-                    if date_key in all_data:
-                        det = all_data[date_key].get('detail', {})
-                        sum_mobil += det.get('mobil', 0)
-                        sum_motor += det.get('motor', 0)
-                        sum_bus += det.get('bus', 0)
-                        sum_truk += det.get('truk', 0)
-                
-                data_mobil.append(sum_mobil)
-                data_motor.append(sum_motor)
-                data_bus.append(sum_bus)
-                data_truk.append(sum_truk)
-
-        elif period == 'bulanan':
-            # LOGIKA: 12 Bulan (Jan - Des) Tahun Berjalan
-            month_list = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
-            for i, m_short in enumerate(month_list):
-                labels.append(m_short)
-                month_prefix = f"{curr_year}-{str(i+1).zfill(2)}"
-                
-                sum_mobil = sum_motor = sum_bus = sum_truk = 0
-                for date_key, val in all_data.items():
-                    if date_key.startswith(month_prefix):
-                        det = val.get('detail', {})
-                        sum_mobil += det.get('mobil', 0)
-                        sum_motor += det.get('motor', 0)
-                        sum_bus += det.get('bus', 0)
-                        sum_truk += det.get('truk', 0)
-                
-                data_mobil.append(sum_mobil)
-                data_motor.append(sum_motor)
-                data_bus.append(sum_bus)
-                data_truk.append(sum_truk)
-
-        return jsonify({
-            "labels": labels,
-            "datasets": {
-                "mobil": data_mobil,
-                "motor": data_motor,
-                "bus": data_bus,
-                "truk": data_truk
-            }
-        })
+        # Kosong = "Semua Data CCTV" -> agregasi otomatis dari semua kamera
+        return jsonify(build_traffic_data(cctv_id, period))
     except Exception as e:
         print(f"Error Public Traffic API: {e}")
         return jsonify({"labels": [], "datasets": {"mobil":[], "motor":[], "bus":[], "truk":[]}})
@@ -660,60 +733,146 @@ def api_public_traffic_data():
 # ===== API SERVER (PERSISTENSI DATA STABIL CCTV) =====
 # =========================================================================
 
+# =========================================================================
+# ===== DETEKSI KONEKSI CCTV (REAL, BUKAN ACak) =====
+# =========================================================================
+
+# Cache hasil cek sinyal per CCTV agar tidak membanjiri YouTube (TTL 6 detik)
+_cctv_signal_cache = {}
+_cctv_signal_lock = threading.Lock()
+_CCTV_SIGNAL_TTL = 6
+
+_YOUTUBE_ID_RE = re.compile(
+    r"(?:youtube\.com/(?:watch\?v=|shorts/|embed/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})"
+)
+
+
+def _extract_youtube_id(url):
+    """Ekstrak ID video YouTube dari URL (watch/shorts/embed/live/youtu.be)."""
+    if not url:
+        return None
+    m = _YOUTUBE_ID_RE.search(url)
+    if m:
+        return m.group(1)
+    try:
+        q = parse_qs(urlparse(url).query)
+        if 'v' in q:
+            return q['v'][0]
+    except Exception:
+        pass
+    return None
+
+
+def _latency_to_signal(latency_ms):
+    """Konversi latensi jaringan ke persentase sinyal (latensi rendah = sinyal kuat)."""
+    if latency_ms <= 150:
+        return 100.0
+    if latency_ms <= 300:
+        return 95.0
+    if latency_ms <= 500:
+        return 88.0
+    if latency_ms <= 900:
+        return 78.0
+    if latency_ms <= 1500:
+        return 65.0
+    return 45.0
+
+
+def _check_cctv_connectivity(cctv):
+    """
+    Deteksi koneksi CCTV secara REAL dengan mengukur akses thumbnail YouTube:
+      - Status DB 'Nonaktif' -> tetap OFF (override manual admin).
+      - URL tidak dikenali    -> tak bisa dicek; online sesuai status DB, sinyal None.
+      - Akses berhasil        -> online, sinyal dihitung dari latensi.
+      - Gagal/timeout         -> offline, sinyal 0.
+    Mengembalikan tuple (online, signal, latency_ms).
+    """
+    cid = cctv['id']
+    aktif = str(cctv.get('status', '')).lower() in ('aktif', 'online')
+
+    now = time.time()
+    with _cctv_signal_lock:
+        cached = _cctv_signal_cache.get(cid)
+        if cached and (now - cached['ts']) < _CCTV_SIGNAL_TTL:
+            return cached['online'], cached['signal'], cached['latency']
+
+    online = False
+    signal = 0.0
+    latency = None
+
+    if aktif:
+        vid = _extract_youtube_id(cctv.get('url'))
+        if vid:
+            url = f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+            t0 = time.time()
+            try:
+                resp = requests.get(url, timeout=4, stream=True,
+                                    headers={'User-Agent': 'Mozilla/5.0'})
+                latency = int((time.time() - t0) * 1000)
+                if resp.status_code == 200:
+                    online = True
+                    signal = round(_latency_to_signal(latency), 1)
+                resp.close()
+            except Exception:
+                online = False
+                signal = 0.0
+                latency = None
+        else:
+            # Aktif tapi URL tak dikenali -> tidak bisa diukur, anggap online
+            online = True
+            signal = None
+
+    with _cctv_signal_lock:
+        _cctv_signal_cache[cid] = {
+            'ts': now, 'online': online, 'signal': signal, 'latency': latency
+        }
+
+    return online, signal, latency
+
+
 @app.route('/api/admin/server_status')
 @api_login_required
 def server_status():
-    import random
-
     # 1. Hitung Uptime (Lama server berjalan)
     uptime_seconds = int(time.time() - SERVER_START_TIME)
     hours, remainder = divmod(uptime_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
     uptime_str = f"{hours}h {minutes}m"
 
-    # 2. Kesehatan sistem berdasarkan STATUS 5 CCTV (Aktif/Nonaktif)
+    # 2. Deteksi koneksi REAL tiap CCTV (diparalelkan agar tidak lambat)
+    cctv_signals = []
     cctv_total = 0
     cctv_online = 0
     cctv_offline = 0
     try:
         cursor = get_db_cursor()
-        cursor.execute("SELECT status, COUNT(*) AS n FROM cctv GROUP BY status")
-        rows = cursor.fetchall()
-        cursor.close()
-        for r in rows:
-            cctv_total += r['n']
-            if str(r['status']).lower() in ('aktif', 'online'):
-                cctv_online += r['n']
-            else:
-                cctv_offline += r['n']
-        cctv_total = cctv_online + cctv_offline
-    except Exception as e:
-        print("Gagal membaca status CCTV:", e)
-
-    # Stabilitas = proporsi CCTV aktif (dengan sedikit variasi agar terlihat hidup)
-    if cctv_total > 0:
-        base_health = (cctv_online / cctv_total) * 100
-    else:
-        base_health = 99.5
-    stability_score = round(max(0.0, min(100.0, base_health + random.uniform(-1.0, 1.0))), 1)
-
-    # 3. Sinyal tiap CCTV (Aktif -> 92-100%, Nonaktif -> OFF)
-    cctv_signals = []
-    try:
-        cursor = get_db_cursor()
-        cursor.execute("SELECT id, name, status FROM cctv ORDER BY id")
+        cursor.execute("SELECT id, name, status, url FROM cctv ORDER BY id")
         cams = cursor.fetchall()
         cursor.close()
-        for c in cams:
-            aktif = str(c['status']).lower() in ('aktif', 'online')
+
+        cctv_total = len(cams)
+        with ThreadPoolExecutor(max_workers=max(1, min(5, cctv_total))) as ex:
+            results = list(ex.map(_check_cctv_connectivity, cams))
+        for c, (online, signal, latency) in zip(cams, results):
+            if online:
+                cctv_online += 1
+            else:
+                cctv_offline += 1
             cctv_signals.append({
                 "id": c['id'],
                 "name": c['name'],
-                "online": aktif,
-                "signal": round(random.uniform(92, 100), 1) if aktif else 0.0
+                "online": online,
+                "signal": signal,
+                "latency": latency
             })
     except Exception as e:
         print("Gagal membaca sinyal CCTV:", e)
+
+    # 3. Stabilitas = proporsi CCTV yang benar-benar online (deteksi real)
+    if cctv_total > 0:
+        stability_score = round((cctv_online / cctv_total) * 100, 1)
+    else:
+        stability_score = 99.5
 
     # 4. Label kondisi berdasarkan kesehatan sistem
     if stability_score >= 99.5:
@@ -728,7 +887,7 @@ def server_status():
         status_label = "KRITIS"
 
     return jsonify({
-        "status": "ONLINE" if stability_score > 0 else "OFFLINE",
+        "status": "ONLINE",
         "status_label": status_label,
         "uptime": uptime_str,
         "stability": stability_score,
@@ -744,111 +903,41 @@ def server_status():
 # ===== API GRAFIK (PERSISTENSI DATA & REAL-TIME UPDATE) =====
 # =========================================================================
 
+def _vehicle_distribution(cctv_id):
+    """Distribusi kendaraan HARI INI (satu CCTV atau agregat SEMUA CCTV)."""
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    counts = {'mobil': 0, 'motor': 0, 'bus': 0, 'truk': 0}
+
+    for node in _get_traffic_nodes(cctv_id).values():
+        d = node.get('daily_reports', {}).get(today_str, {}).get('detail', {})
+        for k in counts:
+            counts[k] += d.get(k, 0)
+
+    values = [counts['mobil'], counts['motor'], counts['bus'], counts['truk']]
+    total = sum(values)
+    perc = [f"{round((v/total*100), 1)}%" if total > 0 else "0%" for v in values]
+
+    return {"labels": ['Mobil', 'Motor', 'Bus', 'Truk'], "data": values, "percentages": perc}
+
 @app.route('/api/admin/vehicle_distribution')
 @api_login_required
 def api_admin_vehicle_distribution():
-    cctv_id = request.args.get('cctv_id')
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    counts = {'mobil': 0, 'motor': 0, 'bus': 0, 'truk': 0}
-    
     try:
-        ref = firebase_db.reference('traffic_stats')
-        
-        if cctv_id:
-            # Ambil data akumulasi khusus HARI INI
-            data = ref.child(f"{cctv_id}/daily_reports/{today_str}/detail").get()
-            if data: counts = data
-        else:
-            # Gabungkan akumulasi HARI INI dari SEMUA CCTV
-            all_data = ref.get()
-            if all_data:
-                for key in all_data:
-                    d = all_data[key].get('daily_reports', {}).get(today_str, {}).get('detail', {})
-                    for k in counts: counts[k] += d.get(k, 0)
-
-        values = [counts['mobil'], counts['motor'], counts['bus'], counts['truk']]
-        total = sum(values)
-        # Hitung persen
-        perc = [f"{round((v/total*100), 1)}%" if total > 0 else "0%" for v in values]
-        
-        return jsonify({"labels": ['Mobil', 'Motor', 'Bus', 'Truk'], "data": values, "percentages": perc})
+        return jsonify(_vehicle_distribution(request.args.get('cctv_id') or None))
     except:
         return jsonify({"labels": ['Mobil', 'Motor', 'Bus', 'Truk'], "data": [0,0,0,0], "percentages": ["0%","0%","0%","0%"]})
 
 @app.route('/api/admin/traffic_data')
 @api_login_required
 def api_admin_traffic_data():
-    cctv_id = request.args.get('cctv_id')
+    cctv_id = request.args.get('cctv_id') or None
     period = request.args.get('period', 'harian')
-    
+
     try:
-        ref = firebase_db.reference(f'traffic_stats/{cctv_id}/daily_reports')
-        all_data = ref.get() or {}
-
-        # Ambil info waktu sekarang
-        now = datetime.now()
-        curr_year = now.year
-        curr_month = now.month
-        month_name = now.strftime('%B')
-
-        labels, d_mobil, d_motor, d_bus, d_truk = [], [], [], [], []
-
-        if period == 'harian':
-            # 7 Hari terakhir
-            for i in range(6, -1, -1):
-                dt = (now - timedelta(days=i)).strftime('%Y-%m-%d')
-                labels.append(datetime.strptime(dt, '%Y-%m-%d').strftime('%d %b'))
-                det = all_data.get(dt, {}).get('detail', {})
-                d_mobil.append(det.get('mobil', 0)); d_motor.append(det.get('motor', 0))
-                d_bus.append(det.get('bus', 0)); d_truk.append(det.get('truk', 0))
-
-        elif period == 'mingguan':
-            # PEMBAGIAN TETAP: 1-7, 8-14, 15-21, 22-Akhir Bulan
-            # Mendapatkan jumlah hari dalam bulan ini
-            last_day = calendar.monthrange(curr_year, curr_month)[1]
-            ranges = [(1, 7), (8, 14), (15, 21), (22, last_day)]
-            
-            for i, (start, end) in enumerate(ranges):
-                labels.append([f"Minggu {i+1}", f"{start}-{end} {month_name[:3]}"])
-                
-                sum_mobil = sum_motor = sum_bus = sum_truk = 0
-                for day in range(start, end + 1):
-                    # Format: 2026-01-01
-                    date_key = f"{curr_year}-{str(curr_month).zfill(2)}-{str(day).zfill(2)}"
-                    if date_key in all_data:
-                        det = all_data[date_key].get('detail', {})
-                        sum_mobil += det.get('mobil', 0)
-                        sum_motor += det.get('motor', 0)
-                        sum_bus += det.get('bus', 0)
-                        sum_truk += det.get('truk', 0)
-                
-                d_mobil.append(sum_mobil); d_motor.append(sum_motor)
-                d_bus.append(sum_bus); d_truk.append(sum_truk)
-
-        elif period == 'bulanan':
-            # Jan - Des tahun berjalan
-            month_list = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
-            for i, m_short in enumerate(month_list):
-                labels.append(m_short)
-                month_prefix = f"{curr_year}-{str(i+1).zfill(2)}"
-                
-                sum_mobil = sum_motor = sum_bus = sum_truk = 0
-                for date_key, val in all_data.items():
-                    if date_key.startswith(month_prefix):
-                        det = val.get('detail', {})
-                        sum_mobil += det.get('mobil', 0)
-                        sum_motor += det.get('motor', 0)
-                        sum_bus += det.get('bus', 0)
-                        sum_truk += det.get('truk', 0)
-                
-                d_mobil.append(sum_mobil); d_motor.append(sum_motor)
-                d_bus.append(sum_bus); d_truk.append(sum_truk)
-
-        return jsonify({
-            "labels": labels,
-            "datasets": {"mobil": d_mobil, "motor": d_motor, "bus": d_bus, "truk": d_truk}
-        })
+        # Kosong = "Semua Data CCTV" -> agregasi otomatis dari semua kamera
+        return jsonify(build_traffic_data(cctv_id, period))
     except Exception as e:
+        print(f"Error Admin Traffic API: {e}")
         return jsonify({"labels": [], "datasets": {}, "error": str(e)})
 
 @app.route('/api/cctv_locations')
@@ -965,32 +1054,8 @@ def api_admin_cameras_delete(cid):
 # --- API PUBLIC UNTUK USER ---
 @app.route('/api/public/vehicle_distribution')
 def api_public_vehicle_distribution():
-    cctv_id = request.args.get('cctv_id')
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    counts = {'mobil': 0, 'motor': 0, 'bus': 0, 'truk': 0}
-    
     try:
-        ref = firebase_db.reference('traffic_stats')
-        # Ambil rincian HARI INI
-        if cctv_id:
-            data = ref.child(f"{cctv_id}/daily_reports/{today_str}/detail").get()
-            if data: counts = data
-        else:
-            all_data = ref.get()
-            if all_data:
-                for key in all_data:
-                    d = all_data[key].get('daily_reports', {}).get(today_str, {}).get('detail', {})
-                    for k in counts: counts[k] += d.get(k, 0)
-
-        values = [counts.get('mobil', 0), counts.get('motor', 0), counts.get('bus', 0), counts.get('truk', 0)]
-        total = sum(values)
-        perc = [f"{round((v/total*100), 1)}%" if total > 0 else "0%" for v in values]
-        
-        return jsonify({
-            "labels": ['Mobil', 'Motor', 'Bus', 'Truk'],
-            "data": values,
-            "percentages": perc
-        })
+        return jsonify(_vehicle_distribution(request.args.get('cctv_id') or None))
     except:
         return jsonify({"labels": ['Mobil', 'Motor', 'Bus', 'Truk'], "data": [0,0,0,0], "percentages": ["0%","0%","0%","0%"]})
 
