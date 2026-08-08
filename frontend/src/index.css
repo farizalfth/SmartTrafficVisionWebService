@@ -29,6 +29,11 @@ body {
   padding-top: 72px;
 }
 
+/* Cegah tampilan kepotong di HP (khususnya Safari) */
+html {
+  overflow-x: clip;
+}
+
 h1, h2, h3, h4, h5, h6 {
   color: #fff;
   font-family: var(--font-heading);
@@ -2187,6 +2192,12 @@ footer {
 
   /* Peta Home lebih pendek agar daftar kamera langsung terlihat */
   .map-container .leaflet-container { height: 360px; }
+
+  /* Reveal menyamping tidak menimbulkan overflow horizontal di HP */
+  .reveal-left,
+  .reveal-right {
+    transform: translateX(0) translateY(40px);
+  }
 }
 
 @media (max-width: 576px) {
