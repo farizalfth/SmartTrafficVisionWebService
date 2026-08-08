@@ -61,7 +61,7 @@ export default function AdminDashboard() {
   const [cameraSearch, setCameraSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", url: "", lat: "", lon: "", status: "Aktif" });
+  const [form, setForm] = useState({ name: "", url: "", lat: "", lon: "", status: "Aktif", kapasitas: "", px_per_m: "", roi: "" });
   const [saving, setSaving] = useState(false);
   const [commentModal, setCommentModal] = useState(false);
   const [commentForm, setCommentForm] = useState({ key: null, nama: "", komentar: "", tanggal: "", jam: "" });
@@ -153,13 +153,22 @@ export default function AdminDashboard() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: "", url: "", lat: "", lon: "", status: "Aktif" });
+    setForm({ name: "", url: "", lat: "", lon: "", status: "Aktif", kapasitas: "", px_per_m: "", roi: "" });
     setModalOpen(true);
   };
 
   const openEdit = (c) => {
     setEditing(c);
-    setForm({ name: c.name, url: c.url || c.youtube_link || "", lat: c.lat == null ? "" : c.lat, lon: c.lon == null ? "" : c.lon, status: c.status || "Aktif" });
+    setForm({
+      name: c.name,
+      url: c.url || c.youtube_link || "",
+      lat: c.lat == null ? "" : c.lat,
+      lon: c.lon == null ? "" : c.lon,
+      status: c.status || "Aktif",
+      kapasitas: c.kapasitas ?? "",
+      px_per_m: c.px_per_m ?? "",
+      roi: Array.isArray(c.roi) ? c.roi.join(", ") : "",
+    });
     setModalOpen(true);
   };
 
@@ -167,6 +176,17 @@ export default function AdminDashboard() {
     e.preventDefault();
     setSaving(true);
     try {
+      let roi = null;
+      const roiRaw = String(form.roi || "").trim();
+      if (roiRaw !== "") {
+        const parts = roiRaw.split(",").map((v) => Number(v.trim()));
+        if (parts.length === 4 && parts.every((v) => !Number.isNaN(v))) {
+          roi = parts;
+        } else {
+          alert("ROI harus 4 angka dipisah koma: left, top, right, bottom (0-1)");
+          return;
+        }
+      }
       const payload = {
         name: form.name.trim(),
         url: form.url.trim(),
@@ -174,6 +194,9 @@ export default function AdminDashboard() {
         lon: form.lon === "" ? null : Number(form.lon),
         status: form.status,
       };
+      if (form.kapasitas !== "") payload.kapasitas = Number(form.kapasitas);
+      if (form.px_per_m !== "") payload.px_per_m = Number(form.px_per_m);
+      if (roi) payload.roi = roi;
       if (!payload.name || !payload.url) {
         alert("Nama dan URL wajib diisi");
         return;
@@ -467,6 +490,7 @@ export default function AdminDashboard() {
                   <div style={{ flex: 1 }}>
                     <div className="camera-name">{c.name}</div>
                     <div className="camera-loc">ID: {c.id} • {c.status} • {c.lat != null ? `${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}` : "-"}</div>
+                    <div className="camera-loc">Kap: {c.kapasitas ?? 15} • Skala: {c.px_per_m ?? 30} px/m{c.roi ? ` • ROI: ${Array.isArray(c.roi) ? c.roi.join(", ") : c.roi}` : ""}</div>
                   </div>
                   <button className="btn btn-sm btn-warning" onClick={() => openEdit(c)}><i className="bi bi-pencil"></i></button>
                   <button className="btn btn-sm btn-danger" onClick={() => confirmDelete(c)}><i className="bi bi-trash"></i></button>
@@ -564,6 +588,24 @@ export default function AdminDashboard() {
                       <option value="Aktif">Aktif</option>
                       <option value="Nonaktif">Nonaktif</option>
                     </select>
+                  </div>
+                  <hr />
+                  <div className="row">
+                    <div className="col-6 mb-3">
+                      <label className="form-label">Kapasitas (max kendaraan)</label>
+                      <input type="number" min="1" max="200" className="form-control" value={form.kapasitas} onChange={(e) => setForm({ ...form, kapasitas: e.target.value })} placeholder="15" />
+                      <small className="text-muted">Referensi untuk kalibrasi kepadatan (opsional)</small>
+                    </div>
+                    <div className="col-6 mb-3">
+                      <label className="form-label">Skala px/meter</label>
+                      <input type="number" min="5" max="300" className="form-control" value={form.px_per_m} onChange={(e) => setForm({ ...form, px_per_m: e.target.value })} placeholder="30" />
+                      <small className="text-muted">Kalibrasi skala jalan utk estimasi kecepatan (opsional)</small>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">ROI (left, top, right, bottom)</label>
+                    <input className="form-control" value={form.roi} onChange={(e) => setForm({ ...form, roi: e.target.value })} placeholder="0, 0.2, 1, 1" />
+                    <small className="text-muted">Area deteksi ternormalisasi 0-1. Kosongkan = seluruh frame</small>
                   </div>
                 </div>
                 <div className="modal-footer">

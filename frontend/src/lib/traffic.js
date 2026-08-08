@@ -110,41 +110,66 @@ export async function getVehicleDistribution(cctvId) {
 export async function getSummary(cctvId, cctvCount) {
   const stats = await getTrafficStats();
   const today = dateKey(new Date());
-  const empty = { kendaraan_hari_ini: 0, kepadatan_tertinggi: 0, rata_rata_kecepatan: "80 km/j", status: "Lancar", kamera_aktif: cctvCount };
+  const empty = { kendaraan_hari_ini: 0, kepadatan_tertinggi: 0, rata_rata_kecepatan: "—", status: "Lancar", kamera_aktif: cctvCount };
 
   if (!cctvId) {
     // Agregasi semua CCTV
     const nodes = nodesMap(stats);
-    let total = 0, sumKep = 0, camCount = 0;
+    let total = 0, sumKep = 0, camCount = 0, speedSum = 0, speedN = 0;
     Object.values(nodes).forEach((node) => {
       const live = node?.live || {};
       const daily = node?.daily_reports?.[today] || {};
       total += daily?.total_hari_ini || live?.total_akumulasi_hari_ini || 0;
-      sumKep += live?.kepadatan_persen || 0;
+      sumKep += live?.occupancy_persen || live?.kepadatan_persen || 0;
+      if (live?.kecepatan_kmh != null) {
+        speedSum += live.kecepatan_kmh;
+        speedN += 1;
+      }
       camCount += 1;
     });
     const avg = camCount ? Math.round(sumKep / camCount) : 0;
-    const status = avg < 40 ? "Lancar" : avg <= 75 ? "Padat" : "Macet";
-    const kecepatan = camCount && avg > 0 ? Math.max(10, 80 - Math.round(avg * 0.8)) : 80;
-    return { kendaraan_hari_ini: total, kepadatan_tertinggi: avg, rata_rata_kecepatan: `${kecepatan} km/j`, status, kamera_aktif: cctvCount };
+    const status = avg < 30 ? "Lancar" : avg < 55 ? "Padat" : "Macet";
+    const kecepatan = speedN ? Math.round(speedSum / speedN) : null;
+    return { kendaraan_hari_ini: total, kepadatan_tertinggi: avg, rata_rata_kecepatan: kecepatan != null ? `${kecepatan} km/j` : "—", status, kamera_aktif: cctvCount };
   }
 
   const node = stats[cctvId] || {};
   const live = node?.live || {};
   const daily = node?.daily_reports?.[today] || {};
   const totalHariIni = daily?.total_hari_ini || live?.total_akumulasi_hari_ini || 0;
-  const totalSekarang = live?.total || 0;
-  const kapasitas = 15;
-  const kepadatan = Math.min(100, Math.round((totalSekarang / kapasitas) * 100));
-  const status = kepadatan < 40 ? "Lancar" : kepadatan <= 75 ? "Padat" : "Macet";
-  const kecepatan = totalSekarang === 0 ? 80 : Math.max(10, 80 - Math.round(kepadatan * 0.8));
-  return { kendaraan_hari_ini: totalHariIni, kepadatan_tertinggi: kepadatan, rata_rata_kecepatan: `${kecepatan} km/j`, status, kamera_aktif: cctvCount };
+  const kepadatan = Math.round(live?.occupancy_persen ?? live?.kepadatan_persen ?? 0);
+  const status = live?.status || (kepadatan < 30 ? "Lancar" : kepadatan < 55 ? "Padat" : "Macet");
+  const kecepatan = live?.kecepatan_kmh ?? null;
+  return { kendaraan_hari_ini: totalHariIni, kepadatan_tertinggi: kepadatan, rata_rata_kecepatan: kecepatan != null ? `${kecepatan} km/j` : "—", status, kamera_aktif: cctvCount };
+}
+
+// Berapa lama data live dianggap masih segar (ms).
+// AI server menulis ulang setiap ~10 detik, jadi 90 detik tanpa update = tidak ada data.
+const STALE_MS = 90 * 1000;
+
+export function isLiveFresh(live) {
+  if (!live || typeof live !== "object") return false;
+  if (typeof live.last_update_ts === "number") {
+    return Date.now() - live.last_update_ts * 1000 < STALE_MS;
+  }
+  if (!live.last_update) return false;
+  const d = new Date(String(live.last_update).replace(" ", "T"));
+  if (isNaN(d.getTime())) return false;
+  return Date.now() - d.getTime() < STALE_MS;
+}
+
+// Status yang benar-benar terukur. Jika tidak ada deteksi segar,
+// jangan mengarang "Lancar" — kembalikan "Tidak Ada Data".
+export function effectiveStatus(live) {
+  if (!isLiveFresh(live) || !live.status) return "Tidak Ada Data";
+  return live.status;
 }
 
 export function statusColor(status) {
   if (status === "Lancar") return "#00C853";
   if (status === "Padat") return "#FFD600";
-  return "#FF5252";
+  if (status === "Macet") return "#FF5252";
+  return "#9aa3b2";
 }
 
 // ===== Analisis sentimen komentar (Baik / Netral / Buruk) =====

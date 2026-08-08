@@ -1,6 +1,12 @@
-// Konfigurasi & helper Firebase (Realtime Database)
+// Konfigurasi & helper Firebase (Realtime Database + Authentication)
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, get, set, update, push, remove } from "firebase/database";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
 import {
   listArticles,
   getArticle,
@@ -21,6 +27,7 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const rtdb = getDatabase(app);
+export const auth = getAuth(app);
 
 const toArray = (obj) =>
   obj == null ? [] : Array.isArray(obj) ? obj.filter(Boolean) : Object.values(obj).filter(Boolean);
@@ -119,6 +126,11 @@ export async function getTrafficStats() {
   return snap.val() || {};
 }
 
+export function listenTrafficStats(cb) {
+  const r = ref(rtdb, "traffic_stats");
+  return onValue(r, (snap) => cb(snap.val() || {}));
+}
+
 export async function getTrafficNode(cctvId) {
   const snap = await get(ref(rtdb, `traffic_stats/${cctvId}`));
   return snap.val() || {};
@@ -164,11 +176,25 @@ export async function deleteComment(key) {
   await remove(ref(rtdb, `user_comments/${key}`));
 }
 
-// ---- Admin auth (sederhana, dari node `admin`) ----
-export async function checkAdmin(username, password) {
-  const snap = await get(ref(rtdb, "admin"));
-  const a = snap.val();
-  return !!a && a.username === username && a.password === password;
+// ---- Admin auth (Firebase Authentication: Email/Password) ----
+// Berjalan penuh di sisi klien, sehingga tetap berfungsi saat di-deploy ke Vercel.
+export async function loginAdmin(email, password) {
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  return cred.user;
+}
+
+export async function logoutAdmin() {
+  await signOut(auth);
+}
+
+// Subscribe status login. callback(user|null) dipanggil saat berubah.
+// Return fungsi untuk berhenti subscribe (cleanup useEffect).
+export function subscribeAuth(cb) {
+  return onAuthStateChanged(auth, cb);
+}
+
+export function getCurrentAdmin() {
+  return auth.currentUser;
 }
 
 // ---- Upload gambar artikel (Supabase Storage publik) ----

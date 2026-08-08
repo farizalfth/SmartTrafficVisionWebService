@@ -1,11 +1,13 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import SummaryCard from "../components/SummaryCard";
 import Reveal from "../components/Reveal";
+import CountUp from "../components/CountUp";
 import { TrafficBarChart, VehicleDoughnut } from "../components/Charts";
-import { getArticles, getCctvList, pushComment, imageUrl } from "../lib/firebase";
-import { buildTrafficData, getVehicleDistribution, getSummary, classifySentiment, sentimentColor } from "../lib/traffic";
+import { getArticles, getCctvList, listenLive, pushComment, imageUrl } from "../lib/firebase";
+import { buildTrafficData, getVehicleDistribution, getSummary, classifySentiment, sentimentColor, statusColor, effectiveStatus, isLiveFresh } from "../lib/traffic";
 
+const AI_URL = import.meta.env.VITE_AI_SERVER_URL || "";
 const VEHICLE_META = [
   { name: "Mobil", color: "linear-gradient(135deg, #7CB9FF, #2563EB)" },
   { name: "Motor", color: "linear-gradient(135deg, #FFE45E, #FFC400)" },
@@ -17,6 +19,13 @@ function toEmbedUrl(url) {
   if (!url) return "";
   if (url.includes("watch?v=")) return `https://www.youtube.com/embed/${url.split("watch?v=")[1]}`;
   return url;
+}
+
+function trafficPillClass(status) {
+  if (status === "Lancar") return "lancar";
+  if (status === "Padat") return "padat";
+  if (status === "Macet") return "macet";
+  return "none";
 }
 
 export default function Dashboard() {
@@ -36,11 +45,24 @@ export default function Dashboard() {
   const [nama, setNama] = useState("");
   const [pesan, setPesan] = useState("");
   const [notice, setNotice] = useState("");
+  const [analysis, setAnalysis] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [live, setLive] = useState({});
+  const streamImgRef = useRef(null);
 
   useEffect(() => {
     getCctvList().then(setCctv);
     getArticles({ published: 1 }).then((a) => setArticles(a.slice(0, 5)));
   }, []);
+
+  useEffect(() => {
+    if (!feedId) {
+      setLive({});
+      return;
+    }
+    const off = listenLive(feedId, setLive);
+    return off;
+  }, [feedId]);
 
   const refreshAll = useCallback(async () => {
     try {
@@ -64,6 +86,24 @@ export default function Dashboard() {
   }, [refreshAll]);
 
   const selectedCctv = cctv.find((c) => String(c.id) === String(feedId));
+
+  const performAnalysis = () => {
+    if (!feedId) {
+      alert("Pilih CCTV terlebih dahulu!");
+      return;
+    }
+    if (!AI_URL) {
+      alert("VITE_AI_SERVER_URL belum diisi. Arahkan ke AI server (contoh http://localhost:5000).");
+      return;
+    }
+    setAnalyzing(true);
+    setAnalysis(`${AI_URL}/video_feed?cctv_id=${feedId}&t=${Date.now()}`);
+  };
+
+  const stopAnalysis = () => {
+    setAnalysis(null);
+    setAnalyzing(false);
+  };
 
   const sendComment = async (e) => {
     e.preventDefault();
@@ -90,15 +130,26 @@ export default function Dashboard() {
   return (
     <div className="container mt-4" style={{ paddingBottom: 50 }}>
       <Reveal>
-        <h4 className="mb-3 fw-bold text-center gradient-text" style={{ color: "#fff" }}>
-          Ringkasan Lalu Lintas Real-time
-        </h4>
+        <div className="dash-hero">
+          <span className="dash-hero-badge"><span className="pulse-dot"></span>Live Monitoring</span>
+          <h1 className="dash-hero-title">Ringkasan Lalu Lintas Real-time</h1>
+          <p className="dash-hero-sub">
+            Pantau kondisi jalan dari setiap CCTV, tren kepadatan, kecepatan rata-rata, dan distribusi kendaraan secara langsung.
+          </p>
+          <div className="dash-hero-meta">
+            <span className="refresh-chip"><span className="pulse-dot"></span>Auto-refresh 5 detik</span>
+            <span className="refresh-chip"><i className="bi bi-database"></i>Data Firebase</span>
+            {selectedCctv && (
+              <span className="refresh-chip"><i className="bi bi-camera-video"></i>{selectedCctv.name}</span>
+            )}
+          </div>
+        </div>
       </Reveal>
       <div className="row g-4 mb-5 justify-content-center">
-        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="car" chip="#3B82F6" value={summary.kendaraan_hari_ini.toLocaleString("id-ID")} label="Total Kendaraan" /></div>
-        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="activity" chip="#FFD600" value={`${summary.kepadatan_tertinggi}%`} label="Kepadatan Saat Ini" /></div>
-        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="gauge" chip="#3B82F6" value={summary.rata_rata_kecepatan} label="Rata-rata Kecepatan" /></div>
-        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="camera" chip="#FF5252" value={summary.kamera_aktif} label="Kamera Aktif" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="car" chip="#3B82F6" value={summary.kendaraan_hari_ini.toLocaleString("id-ID")} label="Total Kendaraan" sub="Hari ini" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="activity" chip="#FFD600" value={`${summary.kepadatan_tertinggi}%`} label="Kepadatan" sub="Saat ini" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="gauge" chip="#00E676" value={summary.rata_rata_kecepatan} label="Rata-rata Kecepatan" sub="km/j" /></div>
+        <div className="col-md-3 col-sm-6 col-6"><SummaryCard icon="camera" chip="#FF5252" value={summary.kamera_aktif} label="Kamera Aktif" sub="Online" /></div>
       </div>
 
       {/* LIVE FEED & ARTIKEL */}
@@ -106,23 +157,51 @@ export default function Dashboard() {
         <div className="col-lg-8">
           <div className="dashboard-card">
             <div className="card-header-custom">
-              <h4>Live Feed CCTV Utama</h4>
-              <select
-                className="form-select form-select-sm bg-dark text-white border-secondary"
-                style={{ width: 250 }}
-                value={feedId}
-                onChange={(e) => setFeedId(e.target.value)}
-              >
-                <option value="">-- Pilih CCTV untuk Menonton --</option>
-                {cctv.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <div className="video-panel-head">
+                <span className={`live-flag${analysis ? "" : " off"}`}><i className="bi bi-broadcast"></i>{analysis ? "AI STREAM" : "LIVE"}</span>
+                <h4 className="mb-0">Streaming CCTV</h4>
+              </div>
+              <div className="d-flex gap-2 flex-wrap stream-controls">
+                <select
+                  className="form-select form-select-sm bg-dark text-white border-secondary select-live"
+                  style={{ width: 250 }}
+                  value={feedId}
+                  onChange={(e) => setFeedId(e.target.value)}
+                >
+                  <option value="">-- Pilih CCTV untuk Menonton --</option>
+                  {cctv.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <button className="btn btn-sm btn-detect" onClick={performAnalysis}>
+                  <i className="bi bi-qr-code-scan me-1"></i>Deteksi Kendaraan
+                </button>
+              </div>
             </div>
-            <div className="video-container">
-              {selectedCctv ? (
+            <div className="video-container position-relative">
+              {analysis ? (
+                <>
+                  <img
+                    ref={streamImgRef}
+                    src={analysis}
+                    alt="Deteksi"
+                    style={{ width: "100%", height: 400, objectFit: "contain", background: "#000" }}
+                    onLoad={() => setAnalyzing(false)}
+                    onError={() => { setAnalyzing(false); setAnalysis(null); alert("Gagal memuat stream deteksi. Pastikan AI server berjalan dan yolo11n.pt tersedia."); }}
+                  />
+                  {analyzing && (
+                    <div className="analysis-overlay">
+                      <div className="spinner mb-3"></div>
+                      <p className="text-warning">Menganalisis Frame Real-time...</p>
+                    </div>
+                  )}
+                  <button className="btn btn-sm btn-danger position-absolute" style={{ top: 10, right: 10, zIndex: 10 }} onClick={stopAnalysis}>
+                    <i className="bi bi-x-lg me-1"></i>Kembali ke Live
+                  </button>
+                </>
+              ) : selectedCctv ? (
                 <iframe src={toEmbedUrl(selectedCctv.url)} title="Live CCTV" allowFullScreen />
               ) : (
                 <div className="text-center text-muted">
@@ -132,13 +211,72 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+            {analysis && !analyzing && (
+              <div className="text-center mt-3 mb-1">
+                <div className="d-flex justify-content-center align-items-center gap-2 flex-wrap detection-badges">
+                  <span className="badge rounded-pill text-dark fw-bold px-3 py-2" style={{ background: "linear-gradient(45deg,#FFD600,#FF6D00)" }}>
+                    <i className="bi bi-qr-code-scan me-1"></i>HASIL DETEKSI YOLO11
+                  </span>
+                  <span className="badge rounded-pill text-white fw-bold px-3 py-2" style={{ background: "#e11d48" }}>
+                    <i className="bi bi-broadcast-pin me-1"></i>Live Streaming Aktif
+                  </span>
+                </div>
+                <div className="d-flex justify-content-center align-items-center gap-2 mt-2 small text-muted flex-wrap">
+                  <span className="live-badge"><i className="bi bi-camera-video me-1"></i>LIVE</span>
+                  <span><i className="bi bi-camera me-1"></i>{selectedCctv?.name}</span>
+                </div>
+              </div>
+            )}
+            {selectedCctv && (
+              <div className="live-status-strip">
+                <div className="live-status-left">
+                  <div className={`traffic-pill ${trafficPillClass(effectiveStatus(live))}`}>
+                    <span className="t-dot"></span>{effectiveStatus(live)}
+                  </div>
+                  <div>
+                    <div className="live-status-name" style={{ fontWeight: 700, color: "#e6edf7", fontSize: "0.82rem" }}>{selectedCctv.name}</div>
+                    <div className="live-status-name">
+                      {live.last_update ? `Update ${live.last_update}` : "Menunggu data deteksi..."}
+                      {isLiveFresh(live) && live.queue != null ? ` • Antrean ${Math.round(live.queue * 100)}%` : ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="live-status-right">
+                  <div className="live-status-kpi">
+                    <span className="kpi-ico"><i className="bi bi-car-front"></i></span>
+                    <div className="live-status-value"><CountUp end={live.total ?? 0} /></div>
+                    <div className="live-status-label">Kendaraan</div>
+                  </div>
+                  <div className="live-status-kpi">
+                    <span className="kpi-ico"><i className="bi bi-activity"></i></span>
+                    <div className="live-status-value"><CountUp end={isLiveFresh(live) ? live.occupancy_persen ?? live.kepadatan_persen ?? 0 : 0} suffix="%" /></div>
+                    <div className="live-status-label">Kepadatan</div>
+                  </div>
+                  <div className="live-status-kpi">
+                    <span className="kpi-ico"><i className="bi bi-speedometer2"></i></span>
+                    {isLiveFresh(live) && live.kecepatan_kmh != null ? (
+                      <div className="live-status-value"><CountUp end={live.kecepatan_kmh} suffix=" km/j" decimals={live.kecepatan_kmh % 1 !== 0 ? 1 : 0} /></div>
+                    ) : (
+                      <div className="live-status-value">— km/j</div>
+                    )}
+                    <div className="live-status-label">Kecepatan</div>
+                  </div>
+                </div>
+                <div className="camera-dens-track" style={{ position: "absolute", bottom: 0, left: 0, right: 0, margin: 0, borderRadius: 0, height: 4 }}>
+                  <div className="camera-dens-fill" style={{ width: `${Math.min(100, isLiveFresh(live) ? live.occupancy_persen ?? live.kepadatan_persen ?? 0 : 0)}%`, background: statusColor(effectiveStatus(live)) }}></div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="col-lg-4">
           <div className="dashboard-card">
             <div className="card-header-custom">
-              <h4>Artikel Terbaru</h4>
+              <div className="sec-head-title">
+                <span className="sec-head-ico"><i className="bi bi-newspaper"></i></span>
+                <h4 className="mb-0 fw-bold">Artikel Terbaru</h4>
+              </div>
               <Link to="/read_artikel" className="btn btn-sm btn-info rounded-pill">
                 Lihat Semua
               </Link>
@@ -161,10 +299,16 @@ export default function Dashboard() {
       </div>
 
       {/* STATISTIK */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h4 className="fw-bold mb-0 gradient-text" style={{ color: "#fff" }}>Statistik & Analitik</h4>
+      <div className="sec-head">
+        <div className="sec-head-title">
+          <span className="sec-head-ico"><i className="bi bi-graph-up-arrow"></i></span>
+          <div>
+            <h4 className="fw-bold mb-0 gradient-text" style={{ color: "#fff" }}>Statistik & Analitik</h4>
+            <small className="text-muted">Tren kepadatan & distribusi kendaraan per CCTV</small>
+          </div>
+        </div>
         <select
-          className="form-select form-select-sm bg-dark text-white border-secondary"
+          className="form-select form-select-sm bg-dark text-white border-secondary select-live"
           style={{ width: 250 }}
           value={chartId}
           onChange={(e) => setChartId(e.target.value)}
@@ -231,9 +375,14 @@ export default function Dashboard() {
       <div className="row mb-5">
         <div className="col-12">
           <div className="dashboard-card" style={{ borderRadius: 16, padding: 25 }}>
-            <div className="d-flex align-items-center mb-4">
-              <i className="bi bi-chat-square-text gradient-icon me-2" style={{ fontSize: 20 }}></i>
-              <h4 className="mb-0 fw-bold">Kirim Ulasan / Komentar Masyarakat</h4>
+            <div className="sec-head mb-4">
+              <div className="sec-head-title">
+                <span className="sec-head-ico"><i className="bi bi-chat-square-text"></i></span>
+                <div>
+                  <h4 className="mb-0 fw-bold">Kirim Ulasan / Komentar Masyarakat</h4>
+                  <small className="text-muted">Komentar Anda dianalisis sentimennya secara otomatis</small>
+                </div>
+              </div>
             </div>
             {notice && (
               <div className={`alert alert-${notice.type} alert-dismissible`} role="alert">

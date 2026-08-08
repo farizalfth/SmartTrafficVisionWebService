@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import Reveal from "../components/Reveal";
 import CctvMap from "../components/CctvMap";
 import { getCctvList, getTrafficStats } from "../lib/firebase";
-import { statusColor } from "../lib/traffic";
+import { statusColor, effectiveStatus } from "../lib/traffic";
 
 const AI_URL = import.meta.env.VITE_AI_SERVER_URL || "";
 const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
@@ -55,15 +55,16 @@ export default function CctvPage() {
       const live = {};
       Object.entries(statsData || {}).forEach(([id, node]) => {
         const l = node?.live || {};
-        live[id] = { status: l.status || "Lancar", total: l.total || 0 };
+        live[id] = l;
       });
       setLiveMap(live);
 
       let padat = 0, macet = 0, aktif = 0;
       Object.values(live).forEach((l) => {
-        if (l.status === "Padat") padat += 1;
-        else if (l.status === "Macet") macet += 1;
-        else aktif += 1;
+        const s = effectiveStatus(l);
+        if (s === "Padat") padat += 1;
+        else if (s === "Macet") macet += 1;
+        else if (s === "Lancar") aktif += 1;
       });
       setStats({ total: cctv.length, aktif, padat, macet });
     } catch (e) {
@@ -105,6 +106,7 @@ export default function CctvPage() {
         <span className="status-badge" style={{ background: "#00C853" }}>● Lancar</span>
         <span className="status-badge" style={{ background: "#FFD600", color: "#000" }}>● Padat</span>
         <span className="status-badge" style={{ background: "#FF5252" }}>● Macet</span>
+        <span className="status-badge" style={{ background: "#9aa3b2", color: "#000" }}>● Tidak Ada Data</span>
         <span className="status-badge" style={{ background: "#3B82F6", color: "#000" }}><i className="bi bi-arrow-repeat me-1"></i>Auto-refresh 5 detik</span>
       </div>
 
@@ -148,7 +150,7 @@ export default function CctvPage() {
           const icons = ["bi-mouse", "bi-cone-striped", "bi-crosshair"];
           const descs = [
             "Klik titik pada peta untuk melihat detail kamera dan status lalu lintas terbaru.",
-            "Hijau = Lancar, Kuning = Padat, Merah = Macet. Warna mengikuti data real-time.",
+            "Hijau = Lancar, Kuning = Padat, Merah = Macet, Abu-abu = Tidak Ada Data. Warna mengikuti data real-time.",
             "Pilih kartu CCTV di bawah untuk memindahkan peta ke lokasi kamera tersebut.",
           ];
           return (
@@ -175,7 +177,7 @@ export default function CctvPage() {
       <div className="row g-3 justify-content-center">
         {cctv.map((c) => {
           const live = liveMap[c.id] || {};
-          const status = live.status || "Lancar";
+          const status = live.status || "Tidak Ada Data";
           const color = statusColor(status);
           return (
             <div className="col-md-6 col-lg-4" key={c.id}>

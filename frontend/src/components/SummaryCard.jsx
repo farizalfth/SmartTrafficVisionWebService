@@ -12,7 +12,7 @@ const ICONS = {
 };
 
 // Card ringkasan KPI dengan ikon (bootstrap-icons)
-export default function SummaryCard({ icon = "activity", chip = "#3B82F6", value = "-", label = "" }) {
+export default function SummaryCard({ icon = "activity", chip = "#3B82F6", value = "-", label = "", sub = "" }) {
   return (
     <div className="summary-card">
       <div className="icon-chip" style={{ "--chip": chip }}>
@@ -20,6 +20,7 @@ export default function SummaryCard({ icon = "activity", chip = "#3B82F6", value
       </div>
       <div className="value">{value}</div>
       <div className="label">{label}</div>
+      {sub && <div className="sub">{sub}</div>}
     </div>
   );
 }

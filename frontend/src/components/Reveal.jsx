@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 // Wrapper scroll-reveal (sama dengan IntersectionObserver di template asli)
-export default function Reveal({ children, variant = "", threshold = 0.12, className = "" }) {
+export default function Reveal({ children, variant = "", threshold = 0.12, className = "", delay = 0 }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
 
@@ -24,7 +24,11 @@ export default function Reveal({ children, variant = "", threshold = 0.12, class
   }, [threshold]);
 
   return (
-    <div ref={ref} className={`reveal ${variant} ${visible ? "visible" : ""} ${className}`}>
+    <div
+      ref={ref}
+      className={`reveal ${variant} ${visible ? "visible" : ""} ${className}`}
+      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+    >
       {children}
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { logoutAdmin } from "../lib/firebase";
 
 export default function Navbar({ admin = false }) {
   const navigate = useNavigate();
@@ -16,7 +17,12 @@ export default function Navbar({ admin = false }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await logoutAdmin();
+    } catch {
+      // Tetap lanjut ke halaman login meski sesi sudah tidak valid.
+    }
     localStorage.removeItem("stv_admin");
     navigate("/login");
   };

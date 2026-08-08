@@ -10,34 +10,37 @@ Sistem pemantauan lalu lintas **real-time** berbasis **AI (Computer Vision)** ya
 │  (React SPA) │                       │   Storage "Image Artikel")│
 │              │  baca/tulis langsung  ┌───────────────────────────┐
 │              │ ◀───────────────────▶ │  Firebase Realtime DB     │
-└──────┬───────┘                       │  cctv · admin · komentar  │
-       │  MJPEG / API                  └────────────▲──────────────┘
-       ▼                                           │ menulis hasil YOLO
-┌───────────────────────────────┐                  │
+└──────┬───────┘                       │  cctv · traffic_stats ·   │
+       │  MJPEG / API                  │  komentar · auth          │
+       ▼                               └────────────▲──────────────┘
+┌───────────────────────────────┐                  │ menulis hasil YOLO
 │  AI Server (Python + Flask)   │ ─────────────────┘
 │  ai_server.py · YOLO11        │
 └───────────────────────────────┘
 ```
 
-1. **AI Server** (`ai_server.py`) menjalankan loop deteksi untuk setiap CCTV aktif di Firebase. Tiap ±10 detik ia mengambil frame dari stream YouTube (`cap_from_youtube`), mendeteksi kendaraan dengan **YOLO11**, lalu menulis `total`, `kepadatan_persen`, `detail`, dan `status` ke node `traffic_stats/<cctv_id>/live`.
+1. **AI Server** (`ai_server.py`) menjalankan loop deteksi untuk setiap CCTV aktif di Firebase. Tiap ±10 detik ia mengambil burst frame dari stream YouTube (`cap_from_youtube`), mendeteksi kendaraan dengan **YOLO11**, menghitung **occupancy**, **kecepatan rata-rata**, dan **rasio antrean** (tracking centroid antar frame), lalu menulis `total`, `occupancy_persen`, `kepadatan_persen`, `kecepatan_kmh`, `queue`, `detail`, dan `status` ke node `traffic_stats/<cctv_id>/live`. Hasilnya diperhalus dengan **EMA smoothing** dan **voting mayoritas status** agar tidak berkedip.
 2. **Frontend** membaca data langsung dari Firebase (CCTV, statistik, komentar) dan Supabase (artikel + gambar) — jadi tetap berfungsi penuh walau AI server sedang mati (data hanya "beku").
 3. **Status server** (`/api/server_status`) mengukur **sinyal real** tiap CCTV (latensi ping ke thumbnail YouTube) dan menampilkan stabilitas sistem, bukan angka hardcode.
+4. **Kalibrasi per kamera**: konfigurasi `kapasitas`, `px_per_m`, dan `roi` tersimpan per CCTV di Firebase (dikelola dari panel admin) dan dipakai AI server saat menghitung kepadatan, kecepatan, dan antrean.
 
 ## Fitur Utama
 
-- **Deteksi Kendaraan Real-Time (YOLO11)**: hitung mobil/motor/bus/truk dari stream CCTV YouTube; bounding box di `/video_feed`; klasifikasi **Lancar / Padat / Macet** (kepadatan < 40% / 40–75% / > 75%).
-- **Dashboard Real-Time** (`/dashboard`): status tiap CCTV, jumlah kendaraan, dan grafik dari data `traffic_stats`.
-- **Peta CCTV** (`/cctv-page`): peta Leaflet + kartu CCTV, **jam server digital dengan pilihan zona WIB / WITA / WIT** (tersinkron `server_time`), dan indikator sinyal real tiap titik.
+- **Deteksi Kendaraan Real-Time (YOLO11)**: hitung mobil/motor/bus/truk dari stream CCTV YouTube; bounding box di `/video_feed`; klasifikasi **Lancar / Padat / Macet** berbasis **occupancy** (sinyal utama) dengan kecepatan & antrean sebagai pendukung bila tracking cukup sampel.
+- **Dashboard Real-Time** (`/dashboard`): ringkasan KPI, status tiap CCTV (pil traffic-light), jumlah & jenis kendaraan, kepadatan, kecepatan, antrean, live stream deteksi AI, dan grafik dari data `traffic_stats`.
+- **Peta CCTV** (`/cctv-page`): peta Leaflet dengan marker berwarna sesuai status (hijau/kuning/merah/abu "Tidak Ada Data"), jam server digital dengan pilihan zona **WIB / WITA / WIT** (tersinkron `server_time`), dan indikator sinyal real tiap titik.
 - **Analitik Lalu Lintas** (`/static-page`): laporan **Harian (7 hari) / Mingguan / Bulanan**, KPI total kendaraan, grafik batang per kategori, dan tabel detail.
 - **Berita & Artikel** (`/read_artikel`, `/artikel/:id`): daftar artikel dengan pencarian + artikel unggulan, halaman baca dengan hero cover, **penghitung views**, tombol **share** (Web Share API, WhatsApp, Facebook, Twitter, salin tautan), progress baca, dan artikel terkait.
-- **Manajemen Admin**: login sederhana (cek node `admin`), kelola CCTV dan artikel (CRUD + upload gambar), pantau status AI server, dan tonton stream deteksi AI.
-- **Komentar pengguna** tersimpan di Firebase.
+- **Manajemen Admin**: login via **Firebase Authentication** (email/password), kelola CCTV dan artikel (CRUD + upload gambar), **kalibrasi per kamera** (kapasitas, skala piksel/meter, ROI jalan), pantau status AI server, dan tonton stream deteksi AI.
+- **Komentar pengguna** tersimpan di Firebase dengan deteksi sentimen otomatis (Baik/Netral/Buruk).
+- **UI/UX responsif**: layout dirapikan khusus untuk HP/tablet (kontrol streaming, KPI, kartu ringkasan, peta, dan halaman login).
 
 ## Struktur Proyek
 
 ```
 SmartTrafficVisionWeb/
-├── ai_server.py               # AI Server: Flask + YOLO11, deteksi CCTV → Firebase
+├── ai_server.py               # AI Server: Flask + YOLO11, deteksi CCTV → Firebase + endpoint kalibrasi
+├── cap_from_youtube.py        # Pembuka stream YouTube untuk OpenCV
 ├── migrate_to_firebase.py     # Skrip migrasi MySQL (XAMPP) → Firebase RTDB
 ├── upload_images.py           # (Opsional) Skrip lama upload gambar → Firebase Storage (butuh Blaze)
 ├── exports/mysql_export.json  # Backup data hasil migrasi
@@ -50,9 +53,9 @@ SmartTrafficVisionWeb/
     ├── scripts/seed_artikel.mjs # Seed artikel ke Supabase (hapus lama + isi artikel baru)
     ├── vercel.json            # SPA rewrites untuk Vercel
     └── src/
-        ├── lib/firebase.js    # Helper baca/tulis Firebase + upload gambar ke Supabase Storage
+        ├── lib/firebase.js    # Helper baca/tulis Firebase, Firebase Auth (login admin), upload Supabase
         ├── lib/supabase.js    # Helper CRUD artikel via Supabase Postgres (REST)
-        ├── lib/traffic.js     # Logika agregasi statistik (port dari app.py)
+        ├── lib/traffic.js     # Logika agregasi statistik + status efektif (kesegaran data)
         ├── components/        # Navbar, Footer, Charts, CctvMap, Reveal, dll.
         └── pages/             # Halaman user & admin (lihat tabel rute)
 ```
@@ -73,7 +76,7 @@ SmartTrafficVisionWeb/
 | `/kelola_artikel` | Daftar artikel admin | Admin* |
 | `/artikel/tambah` · `/artikel/edit/:id` | Tambah / edit artikel | Admin* |
 
-\* *Rute admin dilindungi `ProtectedRoute` — memerlukan login admin (`localStorage.stv_admin`).*
+\* *Rute admin dilindungi `ProtectedRoute` — memerlukan sesi **Firebase Authentication** (login email/password).*
 
 ## Teknologi
 
@@ -82,7 +85,7 @@ SmartTrafficVisionWeb/
 | Frontend | React + Vite, Bootstrap, Chart.js, Leaflet, react-router-dom |
 | Backend & API | Flask (Python) — REST API + AI server |
 | AI Detection | Computer Vision & YOLO11 (OpenCV, ultralytics) |
-| Firebase | Realtime Database — CCTV, traffic stats, komentar, login admin |
+| Firebase | Realtime Database — CCTV, traffic stats, komentar; Authentication — login admin |
 | Supabase | Postgres (tabel `artikel`) + Storage bucket `Image Artikel` (gambar publik) |
 | Streaming Video | Flask MJPEG video feed (`/video_feed`) |
 | Deploy | Vercel (frontend), Render/Railway/Fly.io atau server sendiri (AI server) |
@@ -98,6 +101,7 @@ VITE_FIREBASE_API_KEY=...
 VITE_FIREBASE_AUTH_DOMAIN=...
 VITE_FIREBASE_PROJECT_ID=smart-traffic-vision-app
 VITE_FIREBASE_DATABASE_URL=https://smart-traffic-vision-app-default-rtdb.asia-southeast1.firebasedatabase.app/
+VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 # URL tempat ai_server.py dijalankan. Wajib URL publik (tunnel/port-forward/host)
@@ -111,14 +115,21 @@ VITE_IMAGE_BASE_URL=
 
 ```
 cctv/
-  c1 ... c5            # {id, name, url, lat, lon, status} — key ber-prefix agar tidak jadi array
-admin/                 # {username, password} — dipakai login admin
+  c1 ... c5            # {id, name, url, lat, lon, status, kapasitas, px_per_m, roi}
+                       #   key ber-prefix agar tidak jadi array;
+                       #   kapasitas/px_per_m/roi = kalibrasi per kamera
 traffic_stats/
   <cctv_id>/
-    live/              # {total, kepadatan_persen, detail, status, last_update}
+    live/              # {total, occupancy_persen, kepadatan_persen, kecepatan_kmh,
+                       #  queue, detail, status, last_update, last_update_ts}
     daily_reports/<YYYY-MM-DD>/   # akumulasi harian
 user_comments/         # komentar pengguna
 ```
+
+- `status` (Lancar/Padat/Macet) hanya dianggap valid bila data masih **segar** (`last_update`/`last_update_ts` < 90 detik); jika basi, UI menampilkan **"Tidak Ada Data"** (abu-abu) — tidak mengarang status.
+- `kecepatan_kmh` hanya ditulis bila ada pengukuran tracking nyata; tanpa pengukuran field ini dihapus dan UI menampilkan "—".
+
+> Login admin memakai **Firebase Authentication** (Email/Password), bukan node `admin` di RTDB.
 
 > Key Firebase tidak boleh angka murni (RTDB mengubahnya jadi array), karena itu memakai prefiks `c1..c5`.
 >
@@ -128,9 +139,11 @@ user_comments/         # komentar pengguna
 
 ```bash
 python -m venv venv && source venv/bin/activate
-pip install flask flask-cors opencv-python numpy ultralytics yt-dlp firebase-admin cap_from_youtube
+pip install flask flask-cors opencv-python numpy ultralytics yt-dlp firebase-admin
 python ai_server.py        # http://localhost:5000
 ```
+
+> Modul `cap_from_youtube` sudah tersedia sebagai file lokal (`cap_from_youtube.py`); jika ingin versi pip, tambahkan `cap_from_youtube` pada daftar install. Model **`yolo11n.pt`** harus berada di folder yang sama dengan `ai_server.py`.
 
 Saat server berjalan, `detection_loop` otomatis mendeteksi kendaraan tiap ±10 detik dan menulis hasilnya ke `traffic_stats/<cctv_id>/live`.
 
@@ -141,6 +154,7 @@ Saat server berjalan, `detection_loop` otomatis mendeteksi kendaraan tiap ±10 d
 | `/video_feed?cctv_id=<id>` | Live stream hasil deteksi AI (MJPEG) |
 | `/api/analyze_cctv?cctv_id=<id>` | Deteksi satu frame + bounding box (base64) |
 | `/api/cctv_list` | Daftar CCTV dari Firebase |
+| `/api/cctv_config/<id>` (POST) | Simpan kalibrasi kamera: `{kapasitas?, px_per_m?, roi?}` ke Firebase |
 | `/api/upload` | Upload gambar artikel ke `static/uploads/` |
 | `/api/server_status` | Status server + **sinyal real tiap CCTV** (latensi ke thumbnail YouTube), stabilitas, uptime, `server_time` |
 
@@ -157,11 +171,14 @@ npm run build    # build produksi ke dist/
 
 ## Alur Admin
 
-1. Buka `/login`, isi `username` & `password` (divalidasi ke node `admin` di Firebase).
-2. Sukses → `localStorage.stv_admin = "1"`, redirect ke `/admin`.
+1. Buka `/login`, isi **email** & **password** (verifikasi via **Firebase Authentication**).
+2. Sukses → sesi Firebase Auth aktif, redirect ke `/admin` (proteksi sesi di `ProtectedRoute`).
 3. `/admin`: pantau **status AI server** (sinyal, stabilitas, uptime dari `/api/server_status`), pilih CCTV untuk menonton **stream deteksi AI**, dan kelola CCTV (tambah/edit/hapus).
-4. `/kelola_artikel`: kelola artikel — **Tambah** (`/artikel/tambah`) atau **Edit** (`/artikel/edit/:id`); data tersimpan di **Supabase** (tabel `artikel`) dan gambar di-upload ke Supabase Storage.
-5. Logout menghapus `stv_admin` dan kembali ke `/login`.
+4. **Kalibrasi kamera**: pada modal CCTV admin atur `kapasitas` (perkiraan jumlah kendaraan saat jalan penuh), `px_per_m` (skala piksel per meter untuk estimasi kecepatan), dan `roi` (batas area jalan ternormalisasi 0–1) → tersimpan ke Firebase via `POST /api/cctv_config/<id>` dan langsung dipakai loop deteksi.
+5. `/kelola_artikel`: kelola artikel — **Tambah** (`/artikel/tambah`) atau **Edit** (`/artikel/edit/:id`); data tersimpan di **Supabase** (tabel `artikel`) dan gambar di-upload ke Supabase Storage.
+6. Logout memanggil Firebase `signOut` dan kembali ke `/login`.
+
+> **Setup Firebase Auth (sekali saja):** Firebase Console → *Authentication* → *Sign-in method* → aktifkan provider **Email/Password**, lalu tambahkan user admin (email + password) di tab *Users*. Pastikan `VITE_FIREBASE_AUTH_DOMAIN` terisi di `.env` frontend.
 
 ## Supabase Artikel (Data CRUD)
 
@@ -239,11 +256,13 @@ Membaca database MySQL `smart_traffic` (tabel cctv, artikel, admin) dan menulis 
 
 ## Status Lalu Lintas
 
-Status ditentukan dari persentase kepadatan terhadap kapasitas maksimal jalan (15 kendaraan per frame):
+Status ditentukan berbasis **occupancy** (persentase area jalan yang terisi kendaraan terhadap ROI) sebagai sinyal utama, dengan kecepatan & antrean sebagai pendukung bila tracking menghasilkan sampel cukup (≥3):
 
-- `< 40%` → **Lancar**
-- `40% – 75%` → **Padat**
-- `> 75%` → **Macet**
+- **Occupancy < 30%** → **Lancar** (trafik ringan; kecepatan/antrean tidak dipakai karena tidak andal di trafik sepi).
+- **Occupancy 30–55%** → **Padat**, naik ke **Macet** bila kecepatan < 10 km/j atau antrean ≥ 50% dengan kecepatan < 12 km/j.
+- **Occupancy ≥ 55%** → **Macet**, turun ke **Padat** hanya bila arus benar-benar melaju (kecepatan ≥ 30 km/j dan antrean < 50%).
+
+Hasil diperhalus **EMA smoothing** + **voting mayoritas** (riwayat 6 siklus) agar tidak berkedip. Data yang **tidak segar** (>90 detik) ditampilkan sebagai **"Tidak Ada Data"** — bukan status mengarang.
 
 ## Lisensi
 
