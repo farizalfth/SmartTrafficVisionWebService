@@ -60,7 +60,11 @@ export default function Navbar({ admin = false }) {
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
         >
-          {open ? <i className="bi bi-x-lg"></i> : <span className="navbar-toggler-icon"></span>}
+          <span className="hamb-ico" aria-hidden="true">
+            <span className="hamb-bar"></span>
+            <span className="hamb-bar"></span>
+            <span className="hamb-bar"></span>
+          </span>
         </button>
         <div className={`collapse navbar-collapse justify-content-end${open ? " show" : ""}`} id="navbarNav">
           <ul className="navbar-nav align-items-center" onClick={close}>

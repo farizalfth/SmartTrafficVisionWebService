@@ -68,6 +68,51 @@ a {
   border-bottom: 1px solid var(--border-color);
   padding: 12px 0;
 }
+/* Hamburger (garis 3) — murni CSS agar selalu tergambar di HP, tanpa icon font/gambar */
+.navbar-toggler {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(59, 130, 246, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1060;
+  transition: background 0.3s, border-color 0.3s;
+}
+.navbar-toggler:hover,
+.navbar-toggler.open {
+  background: rgba(59, 130, 246, 0.32);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.navbar-toggler:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+  outline: none;
+}
+.hamb-ico {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 22px;
+}
+.hamb-bar {
+  display: block;
+  width: 100%;
+  height: 2.5px;
+  border-radius: 3px;
+  background: #fff;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.navbar-toggler.open .hamb-bar:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+.navbar-toggler.open .hamb-bar:nth-child(2) { opacity: 0; }
+.navbar-toggler.open .hamb-bar:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+@media (max-width: 991.98px) {
+  .navbar-toggler {
+    display: inline-flex !important;
+    visibility: visible;
+    opacity: 1;
+  }
+}
 .navbar-brand {
   font-weight: 700;
   color: var(--accent-cyan) !important;
@@ -1578,13 +1623,7 @@ footer {
     z-index: 1051;
   }
   .navbar-toggler.open {
-    border-color: rgba(255, 255, 255, 0.25);
-  }
-  .navbar-toggler.open i {
-    font-size: 1.7rem;
-    color: #fff;
-    line-height: 1;
-    display: block;
+    border-color: rgba(255, 255, 255, 0.45);
   }
   .navbar-collapse {
     position: absolute;
