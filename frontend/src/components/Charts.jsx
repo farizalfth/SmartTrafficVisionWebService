@@ -238,6 +238,14 @@ export function VehicleDoughnut({ data = [], size = 280 }) {
 }
 
 export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [] }) {
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const isSmall = vw <= 576;
+
   const multiLabels = labels.map((label, i) => [
     label,
     "──────────",
@@ -257,8 +265,8 @@ export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [
         borderColor: "#3B82F6",
         borderWidth: 1.5,
         borderRadius: 6,
-        barPercentage: 0.6,
-        categoryPercentage: 0.5,
+        barPercentage: isSmall ? 0.5 : 0.6,
+        categoryPercentage: isSmall ? 0.4 : 0.5,
       },
       {
         label: "Netral",
@@ -267,8 +275,8 @@ export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [
         borderColor: "#94A3B8",
         borderWidth: 1.5,
         borderRadius: 6,
-        barPercentage: 0.6,
-        categoryPercentage: 0.5,
+        barPercentage: isSmall ? 0.5 : 0.6,
+        categoryPercentage: isSmall ? 0.4 : 0.5,
       },
       {
         label: "Laporan (Buruk)",
@@ -277,14 +285,14 @@ export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [
         borderColor: "#FF5252",
         borderWidth: 1.5,
         borderRadius: 6,
-        barPercentage: 0.6,
-        categoryPercentage: 0.5,
+        barPercentage: isSmall ? 0.5 : 0.6,
+        categoryPercentage: isSmall ? 0.4 : 0.5,
       },
     ],
   };
 
   return (
-    <div style={{ height: "300px", position: "relative", width: "100%" }}>
+    <div style={{ height: isSmall ? 420 : 300, position: "relative", width: "100%" }}>
       <Bar
         data={data}
         options={{
@@ -293,7 +301,12 @@ export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [
           scales: {
             x: {
               stacked: false,
-              ticks: { color: "#fff", font: { size: 11 }, lineHeight: 1.5 },
+              ticks: {
+                color: "#fff",
+                font: { size: isSmall ? 8 : 11 },
+                lineHeight: isSmall ? 1.4 : 1.5,
+                padding: 6,
+              },
               grid: { display: false },
             },
             y: {
@@ -303,7 +316,19 @@ export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [
             },
           },
           plugins: {
-            legend: legendStyle,
+            legend: isSmall
+              ? {
+                  position: "bottom",
+                  labels: {
+                    color: "#fff",
+                    font: { size: 9, weight: "600", family: "'Poppins', sans-serif" },
+                    usePointStyle: true,
+                    pointStyle: "circle",
+                    boxWidth: 6,
+                    padding: 8,
+                  },
+                }
+              : legendStyle,
             tooltip: {
               ...tooltipStyle,
               callbacks: {

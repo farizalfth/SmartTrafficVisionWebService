@@ -1454,6 +1454,12 @@ footer {
 }
 .camera-name { font-weight: 600; color: #fff; font-size: 0.88rem; min-width: 0; }
 .camera-loc { color: var(--text-muted); font-size: 0.8rem; }
+.camera-item-info { flex: 1; min-width: 0; }
+.camera-item-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.admin-stream-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.admin-stream-controls .form-select { width: 250px; }
+.admin-chart-select { width: 250px; }
+.admin-chart-card { height: 850px; display: flex; flex-direction: column; overflow: hidden; }
 
 /* ===== CCTV CARDS: Daftar Titik CCTV ===== */
 .cctv-card-head {
@@ -1907,20 +1913,21 @@ footer {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+  row-gap: 10px;
   flex-wrap: wrap;
-  margin-top: 16px;
+  margin-top: 20px;
 }
 .refresh-chip {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   font-size: 0.72rem;
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 50px;
-  padding: 5px 14px;
+  padding: 6px 16px;
   font-weight: 600;
   letter-spacing: 0.5px;
 }
@@ -2273,6 +2280,20 @@ footer {
   .reveal-right {
     transform: translateX(0) translateY(40px);
   }
+
+  /* Admin: kontrol live feed & filter penuh selebar layar */
+  .admin-stream-controls { width: 100%; }
+  .admin-stream-controls .form-select,
+  .admin-stream-controls .btn { flex: 1 1 100%; }
+  .admin-stream-controls .form-select { width: 100%; }
+  .admin-chart-select { width: 100%; }
+
+  /* Admin: kartu grafik tidak tinggi berlebihan di HP */
+  .admin-chart-card { height: auto; overflow: visible; }
+
+  /* Admin: daftar kamera rapi, tombol aksi pindah ke baris sendiri */
+  .camera-item { flex-wrap: wrap; gap: 10px; }
+  .camera-item-actions { flex: 1 1 100%; justify-content: flex-end; }
 }
 
 @media (max-width: 576px) {
@@ -2281,7 +2302,8 @@ footer {
   .dash-hero-badge { font-size: 0.65rem; letter-spacing: 2px; padding: 6px 14px; }
   .dash-hero-title { font-size: 1.5rem; margin: 12px 0 6px; }
   .dash-hero-sub { font-size: 0.88rem; }
-  .refresh-chip { font-size: 0.66rem; padding: 4px 11px; gap: 6px; }
+  .dash-hero-meta { gap: 10px; row-gap: 8px; }
+  .refresh-chip { font-size: 0.66rem; padding: 5px 13px; gap: 7px; }
 
   /* Kartu ringkasan lebih padat */
   .summary-card { padding: 14px 10px; min-height: 132px; }

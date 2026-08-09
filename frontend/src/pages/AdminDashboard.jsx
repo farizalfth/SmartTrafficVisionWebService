@@ -329,8 +329,8 @@ export default function AdminDashboard() {
           <div className="dashboard-card position-relative">
             <div className="card-header-custom">
               <h4>Live Feed CCTV Utama</h4>
-              <div className="d-flex gap-2 flex-wrap">
-                <select className="form-select form-select-sm bg-dark text-white border-secondary" style={{ width: 250 }} value={feedId} onChange={(e) => setFeedId(e.target.value)}>
+              <div className="admin-stream-controls">
+                <select className="form-select form-select-sm bg-dark text-white border-secondary" value={feedId} onChange={(e) => setFeedId(e.target.value)}>
                   <option value="">-- Pilih CCTV --</option>
                   {cctv.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -441,9 +441,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* STATISTIK */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
+      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h4 className="fw-bold mb-0 gradient-text">Statistik & Analitik</h4>
-        <select className="form-select form-select-sm bg-dark text-white border-secondary" style={{ width: 250 }} value={chartId} onChange={(e) => setChartId(e.target.value)}>
+        <select className="form-select form-select-sm bg-dark text-white border-secondary admin-chart-select" value={chartId} onChange={(e) => setChartId(e.target.value)}>
           <option value="all">Semua Data CCTV</option>
           {cctv.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
@@ -451,7 +451,7 @@ export default function AdminDashboard() {
 
       <div className="row g-4 mb-5">
         <div className="col-lg-7">
-          <div className="dashboard-card" style={{ height: 850, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div className="dashboard-card admin-chart-card">
             <div className="card-header-custom">
               <h4 className="fw-bold">Laporan Data Kendaraan</h4>
               <div className="period-toggle">
@@ -466,7 +466,7 @@ export default function AdminDashboard() {
           </div>
         </div>
         <div className="col-lg-5">
-          <div className="dashboard-card" style={{ height: 850, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div className="dashboard-card admin-chart-card">
             <div className="card-header-custom">
               <h4>Distribusi Kendaraan</h4>
               <span className="badge rounded-pill text-dark" style={{ backgroundColor: "#3B82F6", padding: "6px 15px" }}>REAL TIME</span>
@@ -546,13 +546,15 @@ export default function AdminDashboard() {
               {filteredCameras.map((c) => (
                 <div className="camera-item" key={c.id}>
                   <div className="camera-thumb"><i className="bi bi-camera-video" style={{ color: "#3B82F6" }}></i></div>
-                  <div style={{ flex: 1 }}>
+                  <div className="camera-item-info">
                     <div className="camera-name">{c.name}</div>
                     <div className="camera-loc">ID: {c.id} • {c.status} • {c.lat != null ? `${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}` : "-"}</div>
                     <div className="camera-loc">Kap: {c.kapasitas ?? 15} • Skala: {c.px_per_m ?? 30} px/m{c.roi ? ` • ROI: ${Array.isArray(c.roi) ? c.roi.join(", ") : c.roi}` : ""}</div>
                   </div>
-                  <button className="btn btn-sm btn-warning" onClick={() => openEdit(c)}><i className="bi bi-pencil"></i></button>
-                  <button className="btn btn-sm btn-danger" onClick={() => confirmDelete(c)}><i className="bi bi-trash"></i></button>
+                  <div className="camera-item-actions">
+                    <button className="btn btn-sm btn-warning" onClick={() => openEdit(c)}><i className="bi bi-pencil"></i></button>
+                    <button className="btn btn-sm btn-danger" onClick={() => confirmDelete(c)}><i className="bi bi-trash"></i></button>
+                  </div>
                 </div>
               ))}
               {!filteredCameras.length && <p className="text-muted text-center py-3">Tidak ada kamera.</p>}
