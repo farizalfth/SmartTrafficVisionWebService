@@ -2352,6 +2352,10 @@ footer {
   .login-brand-wrap { width: 62px; height: 62px; font-size: 28px; border-radius: 18px; }
   .login-field { height: 48px; }
   .login-meta { gap: 8px; }
+
+  /* Daftar sinyal CCTV admin tidak sesak di HP */
+  .cctv-signal-item { gap: 8px; font-size: 0.8rem; }
+  .cctv-signal-item .text-truncate { max-width: 120px !important; }
 }
 
 @media (max-width: 400px) {

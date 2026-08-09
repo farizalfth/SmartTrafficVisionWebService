@@ -568,7 +568,7 @@ export default function AdminDashboard() {
               <span className="status-indicator" style={{ background: serverColor, marginBottom: 8 }}></span>
               <div>
                 <strong style={{ color: serverColor, fontSize: "1.05rem" }}>
-                  {server.status === "OFFLINE" ? "OFFLINE • TIDAK TERHUBUNG" : `ONLINE • ${server.status_label}`}
+                  {server.status === "OFFLINE" || !server.status ? "OFFLINE • TIDAK TERHUBUNG" : `ONLINE • ${server.status_label}`}
                 </strong>
               </div>
             </div>
@@ -581,7 +581,11 @@ export default function AdminDashboard() {
             </div>
             <div style={{ maxHeight: 220, overflowY: "auto" }}>
               {(server.cctv_signals || []).map((s) => renderSignalBar(s))}
-              {!server.cctv_signals?.length && <p className="text-muted small text-center py-2">Status server tidak tersedia.</p>}
+              {!server.cctv_signals?.length && (
+                <p className="text-muted small text-center py-2">
+                  {server.status ? "Belum ada data sinyal CCTV dari server AI." : "Menunggu koneksi ke server AI..."}
+                </p>
+              )}
             </div>
             <div className="d-flex justify-content-between mt-3 pt-3" style={{ borderTop: "1px solid #2a2a2a" }}>
               <span className="text-muted small">Uptime: <b style={{ color: "#fff" }}>{server.uptime || "-"}</b></span>
