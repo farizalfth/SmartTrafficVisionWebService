@@ -292,8 +292,9 @@ export default function AdminDashboard() {
       String(c.id).includes(cameraSearch)
   );
 
+  const isOnline = server.status === "ONLINE";
   const stability = server.stability ?? 99.5;
-  const serverColor = signalColor(stability);
+  const serverColor = isOnline ? signalColor(stability) : "#FF5252";
 
   const renderSignalBar = (s) => {
     const val = s.online ? Number(s.signal) || 0 : 0;
@@ -574,10 +575,10 @@ export default function AdminDashboard() {
             </div>
             <div className="d-flex align-items-center gap-2 mb-2">
               <span className="text-muted small">Stabilitas</span>
-              <span className="ms-auto fw-bold" style={{ color: serverColor }}>{stability}%</span>
+              <span className="ms-auto fw-bold" style={{ color: serverColor }}>{isOnline ? `${stability}%` : "-"}</span>
             </div>
             <div className="status-bar-track">
-              <div className="status-bar-fill" style={{ width: `${Math.min(100, stability)}%`, background: serverColor }}></div>
+              <div className="status-bar-fill" style={{ width: `${isOnline ? Math.min(100, stability) : 0}%`, background: serverColor }}></div>
             </div>
             <div style={{ maxHeight: 220, overflowY: "auto" }}>
               {(server.cctv_signals || []).map((s) => renderSignalBar(s))}
