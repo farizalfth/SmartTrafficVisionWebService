@@ -5,10 +5,14 @@ import { Link } from "react-router-dom";
 import { statusColor, effectiveStatus } from "../lib/traffic";
 
 function makeIcon(status) {
+  const nodata = status === "Tidak Ada Data";
   const color = statusColor(status);
+  const html = nodata
+    ? `<div class="cctv-marker"><span class="cctv-dot nodata"></span></div>`
+    : `<div class="cctv-marker"><span class="cctv-dot" style="background:${color};box-shadow:0 0 12px ${color}"></span></div>`;
   return L.divIcon({
     className: "",
-    html: `<div class="cctv-marker"><span class="cctv-dot" style="background:${color};box-shadow:0 0 12px ${color}"></span></div>`,
+    html,
     iconSize: [22, 22],
     iconAnchor: [11, 11],
     popupAnchor: [0, -14],

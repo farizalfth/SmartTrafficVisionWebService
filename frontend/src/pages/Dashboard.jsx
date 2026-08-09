@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import SummaryCard from "../components/SummaryCard";
 import Reveal from "../components/Reveal";
@@ -7,7 +7,6 @@ import { TrafficBarChart, VehicleDoughnut } from "../components/Charts";
 import { getArticles, getCctvList, listenLive, pushComment, imageUrl } from "../lib/firebase";
 import { buildTrafficData, getVehicleDistribution, getSummary, classifySentiment, sentimentColor, statusColor, effectiveStatus, isLiveFresh } from "../lib/traffic";
 
-const AI_URL = import.meta.env.VITE_AI_SERVER_URL || "";
 const VEHICLE_META = [
   { name: "Mobil", color: "linear-gradient(135deg, #7CB9FF, #2563EB)" },
   { name: "Motor", color: "linear-gradient(135deg, #FFE45E, #FFC400)" },
@@ -45,10 +44,7 @@ export default function Dashboard() {
   const [nama, setNama] = useState("");
   const [pesan, setPesan] = useState("");
   const [notice, setNotice] = useState("");
-  const [analysis, setAnalysis] = useState(null);
-  const [analyzing, setAnalyzing] = useState(false);
   const [live, setLive] = useState({});
-  const streamImgRef = useRef(null);
 
   useEffect(() => {
     getCctvList().then(setCctv);
@@ -86,24 +82,6 @@ export default function Dashboard() {
   }, [refreshAll]);
 
   const selectedCctv = cctv.find((c) => String(c.id) === String(feedId));
-
-  const performAnalysis = () => {
-    if (!feedId) {
-      alert("Pilih CCTV terlebih dahulu!");
-      return;
-    }
-    if (!AI_URL) {
-      alert("VITE_AI_SERVER_URL belum diisi. Arahkan ke AI server (contoh http://localhost:5000).");
-      return;
-    }
-    setAnalyzing(true);
-    setAnalysis(`${AI_URL}/video_feed?cctv_id=${feedId}&t=${Date.now()}`);
-  };
-
-  const stopAnalysis = () => {
-    setAnalysis(null);
-    setAnalyzing(false);
-  };
 
   const sendComment = async (e) => {
     e.preventDefault();
@@ -158,7 +136,7 @@ export default function Dashboard() {
           <div className="dashboard-card">
             <div className="card-header-custom">
               <div className="video-panel-head">
-                <span className={`live-flag${analysis ? "" : " off"}`}><i className="bi bi-broadcast"></i>{analysis ? "AI STREAM" : "LIVE"}</span>
+                <span className="live-flag"><i className="bi bi-broadcast"></i>LIVE</span>
                 <h4 className="mb-0">Streaming CCTV</h4>
               </div>
               <div className="d-flex gap-2 flex-wrap stream-controls">
@@ -175,33 +153,10 @@ export default function Dashboard() {
                     </option>
                   ))}
                 </select>
-                <button className="btn btn-sm btn-detect" onClick={performAnalysis}>
-                  <i className="bi bi-qr-code-scan me-1"></i>Deteksi Kendaraan
-                </button>
               </div>
             </div>
             <div className="video-container position-relative">
-              {analysis ? (
-                <>
-                  <img
-                    ref={streamImgRef}
-                    src={analysis}
-                    alt="Deteksi"
-                    style={{ width: "100%", height: 400, objectFit: "contain", background: "#000" }}
-                    onLoad={() => setAnalyzing(false)}
-                    onError={() => { setAnalyzing(false); setAnalysis(null); alert("Gagal memuat stream deteksi. Pastikan AI server berjalan dan yolo11n.pt tersedia."); }}
-                  />
-                  {analyzing && (
-                    <div className="analysis-overlay">
-                      <div className="spinner mb-3"></div>
-                      <p className="text-warning">Menganalisis Frame Real-time...</p>
-                    </div>
-                  )}
-                  <button className="btn btn-sm btn-danger position-absolute" style={{ top: 10, right: 10, zIndex: 10 }} onClick={stopAnalysis}>
-                    <i className="bi bi-x-lg me-1"></i>Kembali ke Live
-                  </button>
-                </>
-              ) : selectedCctv ? (
+              {selectedCctv ? (
                 <iframe src={toEmbedUrl(selectedCctv.url)} title="Live CCTV" allowFullScreen />
               ) : (
                 <div className="text-center text-muted">
@@ -211,22 +166,6 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-            {analysis && !analyzing && (
-              <div className="text-center mt-3 mb-1">
-                <div className="d-flex justify-content-center align-items-center gap-2 flex-wrap detection-badges">
-                  <span className="badge rounded-pill text-dark fw-bold px-3 py-2" style={{ background: "linear-gradient(45deg,#FFD600,#FF6D00)" }}>
-                    <i className="bi bi-qr-code-scan me-1"></i>HASIL DETEKSI YOLO11
-                  </span>
-                  <span className="badge rounded-pill text-white fw-bold px-3 py-2" style={{ background: "#e11d48" }}>
-                    <i className="bi bi-broadcast-pin me-1"></i>Live Streaming Aktif
-                  </span>
-                </div>
-                <div className="d-flex justify-content-center align-items-center gap-2 mt-2 small text-muted flex-wrap">
-                  <span className="live-badge"><i className="bi bi-camera-video me-1"></i>LIVE</span>
-                  <span><i className="bi bi-camera me-1"></i>{selectedCctv?.name}</span>
-                </div>
-              </div>
-            )}
             {selectedCctv && (
               <div className="live-status-strip">
                 <div className="live-status-left">

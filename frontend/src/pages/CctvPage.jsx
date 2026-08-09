@@ -177,7 +177,7 @@ export default function CctvPage() {
       <div className="row g-3 justify-content-center">
         {cctv.map((c) => {
           const live = liveMap[c.id] || {};
-          const status = live.status || "Tidak Ada Data";
+          const status = effectiveStatus(live);
           const color = statusColor(status);
           return (
             <div className="col-md-6 col-lg-4" key={c.id}>

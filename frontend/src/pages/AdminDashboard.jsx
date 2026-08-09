@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import SummaryCard from "../components/SummaryCard";
+import CountUp from "../components/CountUp";
 import { TrafficBarChart, VehicleDoughnut, CommentBarChart } from "../components/Charts";
 import {
   getCctvList,
@@ -8,12 +9,13 @@ import {
   saveCctv,
   deleteCctv,
   listenComments,
+  listenLive,
   pushComment,
   updateComment,
   deleteComment,
   imageUrl,
 } from "../lib/firebase";
-import { buildTrafficData, getVehicleDistribution, getSummary, classifySentiment, sentimentColor } from "../lib/traffic";
+import { buildTrafficData, getVehicleDistribution, getSummary, classifySentiment, sentimentColor, effectiveStatus, isLiveFresh, statusColor } from "../lib/traffic";
 
 const AI_URL = import.meta.env.VITE_AI_SERVER_URL || "";
 const VEHICLE_META = [
@@ -45,6 +47,13 @@ function signalColor(v) {
   return "#FF5252";
 }
 
+function trafficPillClass(status) {
+  if (status === "Lancar") return "lancar";
+  if (status === "Padat") return "padat";
+  if (status === "Macet") return "macet";
+  return "none";
+}
+
 export default function AdminDashboard() {
   const [cctv, setCctv] = useState([]);
   const [articles, setArticles] = useState([]);
@@ -67,6 +76,7 @@ export default function AdminDashboard() {
   const [commentForm, setCommentForm] = useState({ key: null, nama: "", komentar: "", tanggal: "", jam: "" });
   const [analysis, setAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [live, setLive] = useState({});
   const streamImgRef = useRef(null);
   const offsetRef = useRef(0);
 
@@ -76,6 +86,15 @@ export default function AdminDashboard() {
     const off = listenComments(setComments);
     return off;
   }, []);
+
+  useEffect(() => {
+    if (!feedId) {
+      setLive({});
+      return;
+    }
+    const off = listenLive(feedId, setLive);
+    return off;
+  }, [feedId]);
 
   const refreshAll = useCallback(async () => {
     try {
@@ -354,6 +373,46 @@ export default function AdminDashboard() {
                 <div className="d-flex justify-content-center align-items-center gap-2 mt-2 small text-muted">
                   <span className="live-badge"><i className="bi bi-camera-video me-1"></i>LIVE</span>
                   <span><i className="bi bi-camera me-1"></i>{selectedCctv?.name}</span>
+                </div>
+              </div>
+            )}
+            {selectedCctv && (
+              <div className="live-status-strip">
+                <div className="live-status-left">
+                  <div className={`traffic-pill ${trafficPillClass(effectiveStatus(live))}`}>
+                    <span className="t-dot"></span>{effectiveStatus(live)}
+                  </div>
+                  <div>
+                    <div className="live-status-name" style={{ fontWeight: 700, color: "#e6edf7", fontSize: "0.82rem" }}>{selectedCctv.name}</div>
+                    <div className="live-status-name">
+                      {live.last_update ? `Update ${live.last_update}` : "Menunggu data deteksi..."}
+                      {isLiveFresh(live) && live.queue != null ? ` • Antrean ${Math.round(live.queue * 100)}%` : ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="live-status-right">
+                  <div className="live-status-kpi">
+                    <span className="kpi-ico"><i className="bi bi-car-front"></i></span>
+                    <div className="live-status-value"><CountUp end={live.total ?? 0} /></div>
+                    <div className="live-status-label">Kendaraan</div>
+                  </div>
+                  <div className="live-status-kpi">
+                    <span className="kpi-ico"><i className="bi bi-activity"></i></span>
+                    <div className="live-status-value"><CountUp end={isLiveFresh(live) ? live.occupancy_persen ?? live.kepadatan_persen ?? 0 : 0} suffix="%" /></div>
+                    <div className="live-status-label">Kepadatan</div>
+                  </div>
+                  <div className="live-status-kpi">
+                    <span className="kpi-ico"><i className="bi bi-speedometer2"></i></span>
+                    {isLiveFresh(live) && live.kecepatan_kmh != null ? (
+                      <div className="live-status-value"><CountUp end={live.kecepatan_kmh} suffix=" km/j" decimals={live.kecepatan_kmh % 1 !== 0 ? 1 : 0} /></div>
+                    ) : (
+                      <div className="live-status-value">— km/j</div>
+                    )}
+                    <div className="live-status-label">Kecepatan</div>
+                  </div>
+                </div>
+                <div className="camera-dens-track" style={{ position: "absolute", bottom: 0, left: 0, right: 0, margin: 0, borderRadius: 0, height: 4 }}>
+                  <div className="camera-dens-fill" style={{ width: `${Math.min(100, isLiveFresh(live) ? live.occupancy_persen ?? live.kepadatan_persen ?? 0 : 0)}%`, background: statusColor(effectiveStatus(live)) }}></div>
                 </div>
               </div>
             )}
