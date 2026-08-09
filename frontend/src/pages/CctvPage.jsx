@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import Reveal from "../components/Reveal";
 import CctvMap from "../components/CctvMap";
 import { getCctvList, getTrafficStats } from "../lib/firebase";
-import { statusColor, effectiveStatus } from "../lib/traffic";
+import { statusColor, effectiveStatus, isLiveFresh } from "../lib/traffic";
 
 const AI_URL = import.meta.env.VITE_AI_SERVER_URL || "";
 const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
@@ -179,20 +179,38 @@ export default function CctvPage() {
           const live = liveMap[c.id] || {};
           const status = effectiveStatus(live);
           const color = statusColor(status);
+          const fresh = isLiveFresh(live);
+          const total = fresh ? live.total ?? 0 : null;
+          const kepadatan = fresh ? Math.round(live.occupancy_persen ?? live.kepadatan_persen ?? 0) : null;
+          const kecepatan = fresh && live.kecepatan_kmh != null ? Number(live.kecepatan_kmh) : null;
+          const fmtSpeed = kecepatan != null
+            ? kecepatan.toLocaleString("id-ID", { maximumFractionDigits: kecepatan % 1 === 0 ? 0 : 1 })
+            : null;
           return (
             <div className="col-md-6 col-lg-4" key={c.id}>
               <div className="cctv-card" onClick={() => flyTo(c)}>
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <div className="d-flex align-items-center gap-2">
-                    <span className="signal-dot online" style={{ background: color }}></span>
+                <div className="cctv-card-head">
+                  <div className="cctv-card-title" title={c.name}>
+                    <span className="signal-dot" style={{ background: color }}></span>
                     <span className="camera-name">{c.name}</span>
                   </div>
                   <span className="status-badge" style={{ background: color, color: status === "Padat" ? "#000" : "#fff" }}>
                     {status}
                   </span>
                 </div>
-                <div className="camera-loc">
-                  <b>{live.total ?? 0}</b> kendaraan terdeteksi
+                <div className="cctv-card-metrics">
+                  <div className="cctv-card-metric">
+                    <div className="cctv-card-metric-value">{total != null ? total.toLocaleString("id-ID") : "—"}</div>
+                    <div className="cctv-card-metric-label">Kendaraan</div>
+                  </div>
+                  <div className="cctv-card-metric">
+                    <div className="cctv-card-metric-value">{kepadatan != null ? `${kepadatan}%` : "—"}</div>
+                    <div className="cctv-card-metric-label">Kepadatan</div>
+                  </div>
+                  <div className="cctv-card-metric">
+                    <div className="cctv-card-metric-value">{fmtSpeed != null ? `${fmtSpeed} km/j` : "—"}</div>
+                    <div className="cctv-card-metric-label">Kecepatan</div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1452,8 +1452,57 @@ footer {
   justify-content: center;
   flex-shrink: 0;
 }
-.camera-name { font-weight: 600; color: #fff; }
+.camera-name { font-weight: 600; color: #fff; font-size: 0.88rem; min-width: 0; }
 .camera-loc { color: var(--text-muted); font-size: 0.8rem; }
+
+/* ===== CCTV CARDS: Daftar Titik CCTV ===== */
+.cctv-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.cctv-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.cctv-card-title .camera-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cctv-card-metrics {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid #262626;
+  padding-top: 12px;
+}
+.cctv-card-metric {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #262626;
+  border-radius: 10px;
+  padding: 8px 6px;
+}
+.cctv-card-metric-value {
+  font-weight: 800;
+  color: #fff;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cctv-card-metric-label {
+  color: #9aa3b2;
+  font-size: 0.68rem;
+  margin-top: 2px;
+}
 
 /* ===== ALERTS / BADGES ===== */
 .badge-pill-custom {
@@ -2247,6 +2296,16 @@ footer {
   .live-status-label { font-size: 0.6rem; }
   .live-status-name { font-size: 0.68rem; }
 
+  /* Kartu Daftar Titik CCTV */
+  .cctv-card { padding: 14px 12px; }
+  .cctv-card-head { margin-bottom: 10px; gap: 8px; }
+  .cctv-card .camera-name { font-size: 0.8rem; }
+  .cctv-card .status-badge { padding: 2px 10px; font-size: 0.68rem; white-space: nowrap; }
+  .cctv-card-metrics { gap: 6px; padding-top: 10px; }
+  .cctv-card-metric { padding: 6px 4px; border-radius: 8px; }
+  .cctv-card-metric-value { font-size: 0.85rem; }
+  .cctv-card-metric-label { font-size: 0.62rem; margin-top: 1px; }
+
   /* Panel streaming */
   .video-panel-head .live-flag { font-size: 0.62rem; padding: 4px 11px; }
   .video-container { min-height: 190px; }
@@ -2278,5 +2337,11 @@ footer {
   .dash-hero-title { font-size: 1.35rem; }
   .live-status-value { font-size: 1rem; }
   .video-container iframe, .video-container img { height: 170px !important; }
+
+  /* Kartu Daftar Titik CCTV lebih padat di layar sangat kecil */
+  .cctv-card .camera-name { font-size: 0.74rem; }
+  .cctv-card .status-badge { font-size: 0.62rem; padding: 2px 8px; }
+  .cctv-card-metric-value { font-size: 0.76rem; }
+  .cctv-card-metric-label { font-size: 0.56rem; }
 }
 
