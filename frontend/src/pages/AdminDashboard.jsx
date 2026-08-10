@@ -16,8 +16,7 @@ import {
   imageUrl,
 } from "../lib/firebase";
 import { buildTrafficData, getVehicleDistribution, getSummary, classifySentiment, sentimentColor, effectiveStatus, isLiveFresh, statusColor } from "../lib/traffic";
-
-const AI_URL = import.meta.env.VITE_AI_SERVER_URL || "";
+import { getAiUrl, setAiServerUrl, clearAiServerUrl, getAiUrlSource } from "../lib/aiUrl";
 const VEHICLE_META = [
   { name: "Mobil", color: "linear-gradient(135deg, #7CB9FF, #2563EB)" },
   { name: "Motor", color: "linear-gradient(135deg, #FFE45E, #FFC400)" },
@@ -77,6 +76,7 @@ export default function AdminDashboard() {
   const [analysis, setAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [live, setLive] = useState({});
+  const [aiUrlInput, setAiUrlInput] = useState(getAiUrl());
   const streamImgRef = useRef(null);
   const offsetRef = useRef(0);
 
@@ -120,6 +120,7 @@ export default function AdminDashboard() {
   // Server status polling
   useEffect(() => {
     const fetchStatus = async () => {
+      const AI_URL = getAiUrl();
       if (!AI_URL) return;
       try {
         const res = await fetch(`${AI_URL}/api/server_status`);
@@ -157,6 +158,7 @@ export default function AdminDashboard() {
       alert("Pilih CCTV terlebih dahulu!");
       return;
     }
+    const AI_URL = getAiUrl();
     if (!AI_URL) {
       alert("VITE_AI_SERVER_URL belum diisi. Arahkan ke AI server (contoh http://localhost:5000).");
       return;
@@ -168,6 +170,18 @@ export default function AdminDashboard() {
   const stopAnalysis = () => {
     setAnalysis(null);
     setAnalyzing(false);
+  };
+
+  const saveAiUrl = () => {
+    setAiServerUrl(aiUrlInput);
+    setAiUrlInput(getAiUrl());
+    setServer((prev) => (prev && prev.status === "ONLINE" ? { ...prev, status: "OFFLINE", status_label: "TIDAK TERHUBUNG", cctv_signals: [] } : prev));
+  };
+
+  const resetAiUrl = () => {
+    clearAiServerUrl();
+    setAiUrlInput(getAiUrl());
+    setServer((prev) => (prev && prev.status === "ONLINE" ? { ...prev, status: "OFFLINE", status_label: "TIDAK TERHUBUNG", cctv_signals: [] } : prev));
   };
 
   const openAdd = () => {
@@ -614,6 +628,22 @@ export default function AdminDashboard() {
               <span className="badge" style={{ background: "rgba(59,130,246,0.15)", color: "#3B82F6" }}>
                 <i className="bi bi-arrow-repeat me-1"></i>Update Deteksi: {fmtDetTime(server.last_update)}
               </span>
+            </div>
+            <div className="ai-url-box mt-3">
+              <label className="small text-muted mb-1 d-block">
+                <i className="bi bi-gear me-1"></i>URL Server AI
+              </label>
+              <div className="d-flex gap-1">
+                <input
+                  className="form-control form-control-sm bg-dark text-white border-secondary"
+                  value={aiUrlInput}
+                  onChange={(e) => setAiUrlInput(e.target.value)}
+                  placeholder="http://ip-server:5000"
+                />
+                <button className="btn btn-sm btn-info" title="Simpan URL" onClick={saveAiUrl}><i className="bi bi-check-lg"></i></button>
+                <button className="btn btn-sm btn-outline-light" title="Kembalikan otomatis" onClick={resetAiUrl}><i className="bi bi-arrow-counterclockwise"></i></button>
+              </div>
+              <small className="text-muted" style={{ fontSize: "0.68rem" }}>Saat ini: {getAiUrlSource().source === "override" ? "manual" : getAiUrlSource().source === "env" ? "dari build" : "otomatis"} • {getAiUrl()}</small>
             </div>
           </div>
         </div>

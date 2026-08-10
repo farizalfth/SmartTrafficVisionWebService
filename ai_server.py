@@ -65,6 +65,7 @@ STATUS_KEEP = 6                 # riwayat status utk voting mayoritas
 OCC_LOW = 30                    # occupancy < 30% => trafik ringan (pasti Lancar)
 OCC_HIGH = 55                   # occupancy >= 55% => padat/kemacetan
 SPEED_MIN_SAMPLES = 3           # minimal sampel tracking agar kecepatan/antrean dipercaya
+SIGNAL_FRESH_SEC = 120          # CCTV dianggap "sedang dideteksi" bila data live segar dlm 120 dtk
 
 # State smoothing per kamera
 _smooth_state = {}
@@ -590,12 +591,18 @@ def measure_signal(cctv):
 
 @app.route("/api/server_status")
 def server_status():
-    """Status AI Server + sinyal real setiap CCTV (diukur langsung, bukan hardcode)."""
+    """Status AI Server + sinyal real setiap CCTV (diukur langsung, bukan hardcode).
+
+    Sinyal hanya dimasukkan untuk CCTV yang benar-benar sedang dideteksi
+    (data live segar), sehingga sinyal muncul satu per satu seiring deteksi
+    berjalan — bukan sekaligus semua CCTV.
+    """
     uptime_seconds = int(time.time() - SERVER_START_TIME)
     hours, remainder = divmod(uptime_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
     cams = fetch_cctv_list()
+    now_ts = int(time.time())
 
     signals = []
     online_count = 0
@@ -603,11 +610,21 @@ def server_status():
     latest_detection = None
     for c in cams:
         cid = str(c["id"])
-        signal, latency, ok = measure_signal(c)
         live = firebase_db.reference(f"traffic_stats/{cid}/live").get() or {}
-        last = live.get("last_update") if isinstance(live, dict) else None
+        if not isinstance(live, dict):
+            live = {}
+        last = live.get("last_update")
+        last_ts = live.get("last_update_ts")
         if last and (latest_detection is None or last > latest_detection):
             latest_detection = last
+        # CCTV yang belum/berhenti dideteksi tidak ditampilkan sinyalnya.
+        try:
+            fresh = last_ts is not None and (now_ts - int(last_ts)) <= SIGNAL_FRESH_SEC
+        except (TypeError, ValueError):
+            fresh = False
+        if not fresh:
+            continue
+        signal, latency, ok = measure_signal(c)
         if ok:
             online_count += 1
             total_signal += signal
@@ -621,7 +638,7 @@ def server_status():
         })
 
     total = len(cams)
-    stability = round(total_signal / total, 1) if total else 99.5
+    stability = round(total_signal / len(signals), 1) if signals else 0.0
     if stability >= 90:
         label = "SANGAT STABIL"
     elif stability >= 70:

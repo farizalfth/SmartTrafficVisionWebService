@@ -1582,6 +1582,12 @@ footer {
   position: relative;
   overflow: hidden;
 }
+.ai-url-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed #333;
+  border-radius: 12px;
+  padding: 10px;
+}
 .status-indicator {
   width: 18px;
   height: 18px;

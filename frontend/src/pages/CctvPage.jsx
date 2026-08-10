@@ -3,8 +3,8 @@ import Reveal from "../components/Reveal";
 import CctvMap from "../components/CctvMap";
 import { getCctvList, getTrafficStats } from "../lib/firebase";
 import { statusColor, effectiveStatus, isLiveFresh } from "../lib/traffic";
+import { getAiUrl } from "../lib/aiUrl";
 
-const AI_URL = import.meta.env.VITE_AI_SERVER_URL || "";
 const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const ZONES = {
@@ -27,7 +27,7 @@ export default function CctvPage() {
     const tick = () => setClock(Date.now() + offset);
     const sync = async () => {
       try {
-        const res = await fetch(`${AI_URL}/api/server_status`, { cache: "no-store" });
+        const res = await fetch(`${getAiUrl()}/api/server_status`, { cache: "no-store" });
         const data = await res.json();
         const epoch = wibToEpoch(data.server_time);
         if (epoch != null) {
