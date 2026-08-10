@@ -300,104 +300,110 @@ def generate_live_stream(cctv):
     cfg = get_camera_config(cctv)
     tracker = SpeedTracker(cfg["px_per_m"])
     prev_t = None
+    # CCTV ini sedang di-streaming deteksinya oleh pengguna → ditampilkan sinyalnya.
+    try:
+        _active_streams[str(cctv_id)] = time.time()
 
-    while cap.isOpened():
-        success, frame = cap.read()
-        if not success:
-            break
+        while cap.isOpened():
+            success, frame = cap.read()
+            if not success:
+                break
 
-        t = time.time()
-        dt = (t - prev_t) if prev_t else None
-        prev_t = t
+            t = time.time()
+            _active_streams[str(cctv_id)] = t
+            dt = (t - prev_t) if prev_t else None
+            prev_t = t
 
-        results = model.predict(frame, classes=VEHICLE_CLASSES, verbose=False, conf=0.25)
-        counts_now, total_now, occ, boxes = analyze_frame(frame, results, cfg["roi"])
-        speeds = tracker.update(boxes, t, dt)
-        avg_speed_mps, queue_ratio = speed_stats(speeds)
-        speed_kmh = (avg_speed_mps * 3.6) if avg_speed_mps is not None else None
+            results = model.predict(frame, classes=VEHICLE_CLASSES, verbose=False, conf=0.25)
+            counts_now, total_now, occ, boxes = analyze_frame(frame, results, cfg["roi"])
+            speeds = tracker.update(boxes, t, dt)
+            avg_speed_mps, queue_ratio = speed_stats(speeds)
+            speed_kmh = (avg_speed_mps * 3.6) if avg_speed_mps is not None else None
 
-        occ_s = ema(cctv_id, "occ", occ)
-        total_s = ema(cctv_id, "total", float(total_now))
-        prev_speed = _smooth_state.get(str(cctv_id), {}).get("speed")
-        speed_s = ema(cctv_id, "speed", speed_kmh if speed_kmh is not None else (prev_speed if prev_speed is not None else 0.0))
-        queue_s = ema(cctv_id, "queue", queue_ratio)
+            occ_s = ema(cctv_id, "occ", occ)
+            total_s = ema(cctv_id, "total", float(total_now))
+            prev_speed = _smooth_state.get(str(cctv_id), {}).get("speed")
+            speed_s = ema(cctv_id, "speed", speed_kmh if speed_kmh is not None else (prev_speed if prev_speed is not None else 0.0))
+            queue_s = ema(cctv_id, "queue", queue_ratio)
 
-        kepadatan_persen = min(100, int(round(occ_s)))
-        status_val = classify_status(int(round(total_s)), occ_s, speed_s, queue_s)
-        status_val = vote_status(cctv_id, status_val)
+            kepadatan_persen = min(100, int(round(occ_s)))
+            status_val = classify_status(int(round(total_s)), occ_s, speed_s, queue_s)
+            status_val = vote_status(cctv_id, status_val)
 
-        waktu_sekarang_unix = time.time()
-        now = datetime.now()
-        timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
-        date_today = now.strftime("%Y-%m-%d")
-
-        # --- A. UPDATE LIVE (Dashboard Real-time) ---
-        try:
-            ref_live = firebase_db.reference(f"traffic_stats/{cctv_id}/live")
-            ref_live.update({
-                "total": int(round(total_s)),
-                "kepadatan_persen": kepadatan_persen,
-                "occupancy_persen": round(occ_s, 1),
-                "detail": counts_now,
-                "kecepatan_kmh": round(speed_s, 1),
-                "queue": round(queue_s, 2),
-                "last_update": timestamp_str,
-                "last_update_ts": int(waktu_sekarang_unix),
-                "status": status_val,
-            })
-        except Exception:
-            pass
-
-        # --- B. AKUMULASI HARIAN ---
-        if waktu_sekarang_unix - last_accumulate_time > 5:
+            waktu_sekarang_unix = time.time()
+            now = datetime.now()
+            timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
+            date_today = now.strftime("%Y-%m-%d")
+    
+            # --- A. UPDATE LIVE (Dashboard Real-time) ---
             try:
-                ref_daily = firebase_db.reference(f"traffic_stats/{cctv_id}/daily_reports/{date_today}")
-                daily_data = ref_daily.get()
-
-                if not daily_data:
-                    first_detection = timestamp_str
-                    old_total_daily = 0
-                    old_detail_daily = {"mobil": 0, "motor": 0, "bus": 0, "truk": 0}
-                    duration_str = "0 menit"
-                else:
-                    first_detection = daily_data.get("first_detection", timestamp_str)
-                    old_total_daily = daily_data.get("total_hari_ini", 0)
-                    old_detail_daily = daily_data.get("detail", {"mobil": 0, "motor": 0, "bus": 0, "truk": 0})
-                    start_dt = datetime.strptime(first_detection, "%Y-%m-%d %H:%M:%S")
-                    diff = now - start_dt
-                    duration_str = f"{int(diff.total_seconds() // 60)} menit"
-
-                new_total_daily = old_total_daily + total_now
-                new_detail_daily = {
-                    "mobil": old_detail_daily.get("mobil", 0) + counts_now["mobil"],
-                    "motor": old_detail_daily.get("motor", 0) + counts_now["motor"],
-                    "bus": old_detail_daily.get("bus", 0) + counts_now["bus"],
-                    "truk": old_detail_daily.get("truk", 0) + counts_now["truk"],
-                }
-
-                ref_daily.set({
-                    "first_detection": first_detection,
-                    "last_detection": timestamp_str,
-                    "duration_active": duration_str,
-                    "total_hari_ini": new_total_daily,
-                    "detail": new_detail_daily,
-                    "last_update": timestamp_str,
-                    "status_terakhir": status_val,
-                    "kepadatan_terakhir_persen": kepadatan_persen,
-                })
+                ref_live = firebase_db.reference(f"traffic_stats/{cctv_id}/live")
                 ref_live.update({
-                    "total_akumulasi_hari_ini": new_total_daily,
-                    "session_duration": duration_str,
+                    "total": int(round(total_s)),
+                    "kepadatan_persen": kepadatan_persen,
+                    "occupancy_persen": round(occ_s, 1),
+                    "detail": counts_now,
+                    "kecepatan_kmh": round(speed_s, 1),
+                    "queue": round(queue_s, 2),
+                    "last_update": timestamp_str,
+                    "last_update_ts": int(waktu_sekarang_unix),
+                    "status": status_val,
                 })
-                last_accumulate_time = waktu_sekarang_unix
-            except Exception as e:
-                print(f"Error Harian: {e}")
+            except Exception:
+                pass
+    
+            # --- B. AKUMULASI HARIAN ---
+            if waktu_sekarang_unix - last_accumulate_time > 5:
+                try:
+                    ref_daily = firebase_db.reference(f"traffic_stats/{cctv_id}/daily_reports/{date_today}")
+                    daily_data = ref_daily.get()
+    
+                    if not daily_data:
+                        first_detection = timestamp_str
+                        old_total_daily = 0
+                        old_detail_daily = {"mobil": 0, "motor": 0, "bus": 0, "truk": 0}
+                        duration_str = "0 menit"
+                    else:
+                        first_detection = daily_data.get("first_detection", timestamp_str)
+                        old_total_daily = daily_data.get("total_hari_ini", 0)
+                        old_detail_daily = daily_data.get("detail", {"mobil": 0, "motor": 0, "bus": 0, "truk": 0})
+                        start_dt = datetime.strptime(first_detection, "%Y-%m-%d %H:%M:%S")
+                        diff = now - start_dt
+                        duration_str = f"{int(diff.total_seconds() // 60)} menit"
+    
+                    new_total_daily = old_total_daily + total_now
+                    new_detail_daily = {
+                        "mobil": old_detail_daily.get("mobil", 0) + counts_now["mobil"],
+                        "motor": old_detail_daily.get("motor", 0) + counts_now["motor"],
+                        "bus": old_detail_daily.get("bus", 0) + counts_now["bus"],
+                        "truk": old_detail_daily.get("truk", 0) + counts_now["truk"],
+                    }
+    
+                    ref_daily.set({
+                        "first_detection": first_detection,
+                        "last_detection": timestamp_str,
+                        "duration_active": duration_str,
+                        "total_hari_ini": new_total_daily,
+                        "detail": new_detail_daily,
+                        "last_update": timestamp_str,
+                        "status_terakhir": status_val,
+                        "kepadatan_terakhir_persen": kepadatan_persen,
+                    })
+                    ref_live.update({
+                        "total_akumulasi_hari_ini": new_total_daily,
+                        "session_duration": duration_str,
+                    })
+                    last_accumulate_time = waktu_sekarang_unix
+                except Exception as e:
+                    print(f"Error Harian: {e}")
+    
+            annotated_frame = results[0].plot()
+            ret, buffer = cv2.imencode(".jpg", annotated_frame)
+            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n")
 
-        annotated_frame = results[0].plot()
-        ret, buffer = cv2.imencode(".jpg", annotated_frame)
-        yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n")
-
-    cap.release()
+    finally:
+        cap.release()
+        _active_streams.pop(str(cctv_id), None)
 
 
 @app.route("/video_feed")
@@ -544,6 +550,11 @@ def cctv_config(cid):
 _SIGNAL_CACHE = {}
 _SIGNAL_TTL = 15
 
+# CCTV yang sedang di-streaming deteksinya via /video_feed (pengguna menekan
+# "Deteksi Kendaraan"). Sinyal hanya ditampilkan untuk CCTV dalam set ini.
+_active_streams = {}
+ACTIVE_STREAM_TTL = SIGNAL_FRESH_SEC
+
 
 def measure_signal(cctv):
     """Ukur sinyal CCTV secara real: latensi HEAD thumbnail YouTube.
@@ -593,9 +604,9 @@ def measure_signal(cctv):
 def server_status():
     """Status AI Server + sinyal real setiap CCTV (diukur langsung, bukan hardcode).
 
-    Sinyal hanya dimasukkan untuk CCTV yang benar-benar sedang dideteksi
-    (data live segar), sehingga sinyal muncul satu per satu seiring deteksi
-    berjalan — bukan sekaligus semua CCTV.
+    Sinyal hanya dimasukkan untuk CCTV yang SEDANG di-streaming deteksinya
+    oleh pengguna (tombol "Deteksi Kendaraan"), jadi muncul satu per satu
+    mengikuti CCTV yang ditekan — bukan sekaligus semua CCTV.
     """
     uptime_seconds = int(time.time() - SERVER_START_TIME)
     hours, remainder = divmod(uptime_seconds, 3600)
@@ -610,20 +621,16 @@ def server_status():
     latest_detection = None
     for c in cams:
         cid = str(c["id"])
+        # Hanya CCTV yang sedang di-streaming (belum lama "Deteksi Kendaraan" ditekan).
+        active_since = _active_streams.get(cid)
+        if active_since is None or (now_ts - active_since) > ACTIVE_STREAM_TTL:
+            continue
         live = firebase_db.reference(f"traffic_stats/{cid}/live").get() or {}
         if not isinstance(live, dict):
             live = {}
         last = live.get("last_update")
-        last_ts = live.get("last_update_ts")
         if last and (latest_detection is None or last > latest_detection):
             latest_detection = last
-        # CCTV yang belum/berhenti dideteksi tidak ditampilkan sinyalnya.
-        try:
-            fresh = last_ts is not None and (now_ts - int(last_ts)) <= SIGNAL_FRESH_SEC
-        except (TypeError, ValueError):
-            fresh = False
-        if not fresh:
-            continue
         signal, latency, ok = measure_signal(c)
         if ok:
             online_count += 1
