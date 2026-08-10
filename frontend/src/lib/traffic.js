@@ -87,6 +87,78 @@ export async function buildTrafficData(cctvId, period = "harian") {
   return { labels, datasets: { mobil: dataMobil, motor: dataMotor, bus: dataBus, truk: dataTruk } };
 }
 
+// Ringkasan data teks per periode (harian / mingguan / bulanan).
+// Menghasilkan baris: { label, total, mobil, motor, bus, truk, kepadatan, status }.
+export async function buildTextSummaries(cctvId, period = "harian") {
+  const stats = await getTrafficStats();
+  const nodes = cctvId ? { [String(cctvId)]: stats[cctvId] || {} } : nodesMap(stats);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  const summarize = (filter) => {
+    let total = 0;
+    const sum = { mobil: 0, motor: 0, bus: 0, truk: 0 };
+    let kepSum = 0, kepN = 0;
+    const statusCount = {};
+    Object.values(nodes).forEach((node) => {
+      Object.entries(node?.daily_reports || {}).forEach(([dk, rep]) => {
+        if (rep && typeof rep === "object" && filter(dk, rep)) {
+          const d = rep?.detail || {};
+          sum.mobil += d.mobil || 0;
+          sum.motor += d.motor || 0;
+          sum.bus += d.bus || 0;
+          sum.truk += d.truk || 0;
+          total += rep?.total_hari_ini || 0;
+          if (rep?.kepadatan_terakhir_persen != null) {
+            kepSum += Number(rep.kepadatan_terakhir_persen);
+            kepN += 1;
+          }
+          if (rep?.status_terakhir) statusCount[rep.status_terakhir] = (statusCount[rep.status_terakhir] || 0) + 1;
+        }
+      });
+    });
+    const kepadatan = kepN ? Math.round(kepSum / kepN) : null;
+    let status = null;
+    const statusKeys = Object.keys(statusCount);
+    if (statusKeys.length) {
+      status = statusKeys.sort((a, b) => statusCount[b] - statusCount[a])[0];
+    } else if (kepadatan != null) {
+      status = kepadatan < 30 ? "Lancar" : kepadatan < 55 ? "Padat" : "Macet";
+    }
+    return { total, ...sum, kepadatan, status };
+  };
+
+  const rows = [];
+  if (period === "harian") {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(year, month - 1, now.getDate() - i);
+      const key = dateKey(d);
+      rows.push({
+        label: d.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "short" }),
+        ...summarize((dk) => dk === key),
+      });
+    }
+  } else if (period === "mingguan") {
+    const lastDay = new Date(year, month, 0).getDate();
+    const ranges = [[1, 7], [8, 14], [15, 21], [22, lastDay]];
+    const monthShort = now.toLocaleDateString("id-ID", { month: "short" });
+    ranges.forEach(([start, end], i) => {
+      rows.push({
+        label: `Minggu ${i + 1} (${start}-${end} ${monthShort})`,
+        ...summarize((dk) => dk.startsWith(`${year}-${pad(month)}-`) && Number(dk.slice(8, 10)) >= start && Number(dk.slice(8, 10)) <= end),
+      });
+    });
+  } else {
+    const monthList = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    monthList.forEach((m, i) => {
+      const prefix = `${year}-${pad(i + 1)}`;
+      rows.push({ label: m, ...summarize((dk) => dk.startsWith(prefix)) });
+    });
+  }
+  return rows;
+}
+
 export async function getVehicleDistribution(cctvId) {
   const stats = await getTrafficStats();
   const nodes = cctvId ? { [String(cctvId)]: stats[cctvId] || {} } : nodesMap(stats);

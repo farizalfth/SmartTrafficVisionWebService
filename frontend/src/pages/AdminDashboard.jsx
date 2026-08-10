@@ -15,7 +15,7 @@ import {
   deleteComment,
   imageUrl,
 } from "../lib/firebase";
-import { buildTrafficData, getVehicleDistribution, getSummary, classifySentiment, sentimentColor, effectiveStatus, isLiveFresh, statusColor } from "../lib/traffic";
+import { buildTrafficData, buildTextSummaries, getVehicleDistribution, getSummary, classifySentiment, sentimentColor, effectiveStatus, isLiveFresh, statusColor } from "../lib/traffic";
 import { getAiUrl, setAiServerUrl, clearAiServerUrl, getAiUrlSource } from "../lib/aiUrl";
 const VEHICLE_META = [
   { name: "Mobil", color: "linear-gradient(135deg, #7CB9FF, #2563EB)" },
@@ -61,6 +61,7 @@ export default function AdminDashboard() {
   const [period, setPeriod] = useState("harian");
   const [summary, setSummary] = useState({});
   const [traffic, setTraffic] = useState({ labels: [], datasets: {} });
+  const [textData, setTextData] = useState([]);
   const [vehicle, setVehicle] = useState({ data: [0, 0, 0, 0], percentages: ["0%", "0%", "0%", "0%"] });
   const [comments, setComments] = useState([]);
   const [server, setServer] = useState({});
@@ -98,14 +99,16 @@ export default function AdminDashboard() {
 
   const refreshAll = useCallback(async () => {
     try {
-      const [sum, t, v] = await Promise.all([
+      const [sum, t, v, tx] = await Promise.all([
         getSummary(chartId === "all" ? null : chartId, cctv.length),
         buildTrafficData(chartId === "all" ? null : chartId, period),
         getVehicleDistribution(chartId === "all" ? null : chartId),
+        buildTextSummaries(chartId === "all" ? null : chartId, period),
       ]);
       setSummary(sum);
       setTraffic(t);
       setVehicle(v);
+      setTextData(tx);
     } catch (e) {
       console.error("Refresh error:", e);
     }
@@ -498,6 +501,99 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* RINGKASAN DATA TEKS */}
+      <div className="dashboard-card text-summary-card mb-4">
+        <div className="card-header-custom">
+          <h4>Ringkasan Data Teks</h4>
+          <span className="badge rounded-pill text-dark fw-bold px-3 py-2" style={{ background: "linear-gradient(45deg,#FFD600,#FF6D00)" }}>
+            <i className="bi bi-file-text me-1"></i>
+            {period === "harian" ? "PER HARI" : period === "mingguan" ? "PER MINGGU" : "PER BULAN"}
+          </span>
+        </div>
+
+        {/* Tabel desktop */}
+        <div className="text-summary-table-wrap d-none d-md-block">
+          <table className="table table-dark table-hover text-summary-table mb-0">
+            <thead>
+              <tr>
+                <th>Periode</th>
+                <th className="text-center">Total</th>
+                <th className="text-center">Mobil</th>
+                <th className="text-center">Motor</th>
+                <th className="text-center">Bus</th>
+                <th className="text-center">Truk</th>
+                <th className="text-center">Kepadatan</th>
+                <th className="text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {textData.map((r) => (
+                <tr key={r.label}>
+                  <td className="fw-bold" style={{ color: "#e6edf7" }}>{r.label}</td>
+                  <td className="text-center fw-bold" style={{ color: "#3b82f6" }}>{r.total.toLocaleString("id-ID")}</td>
+                  <td className="text-center text-muted">{r.mobil.toLocaleString("id-ID")}</td>
+                  <td className="text-center text-muted">{r.motor.toLocaleString("id-ID")}</td>
+                  <td className="text-center text-muted">{r.bus.toLocaleString("id-ID")}</td>
+                  <td className="text-center text-muted">{r.truk.toLocaleString("id-ID")}</td>
+                  <td className="text-center">{r.kepadatan != null ? `${r.kepadatan}%` : "-"}</td>
+                  <td className="text-center">
+                    {r.status ? (
+                      <span className={`traffic-pill ${trafficPillClass(r.status)}`}><span className="t-dot"></span>{r.status}</span>
+                    ) : "-"}
+                  </td>
+                </tr>
+              ))}
+              {!textData.length && (
+                <tr><td colSpan={8} className="text-center text-muted py-3">Belum ada data pada periode ini.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Kartu khusus mobile */}
+        <div className="text-summary-mobile d-md-none">
+          {textData.map((r) => (
+            <div className="text-summary-mobile-card" key={r.label}>
+              <div className="text-summary-mobile-head">
+                <span className="text-summary-mobile-label">{r.label}</span>
+                {r.status ? (
+                  <span className={`traffic-pill ${trafficPillClass(r.status)}`}><span className="t-dot"></span>{r.status}</span>
+                ) : (
+                  <span className="text-muted small fw-bold">-</span>
+                )}
+              </div>
+              <div className="text-summary-mobile-grid">
+                <div className="text-summary-mobile-cell">
+                  <span className="tsm-value" style={{ color: "#3b82f6" }}>{r.total.toLocaleString("id-ID")}</span>
+                  <span className="tsm-label">Total</span>
+                </div>
+                <div className="text-summary-mobile-cell">
+                  <span className="tsm-value">{r.mobil.toLocaleString("id-ID")}</span>
+                  <span className="tsm-label">Mobil</span>
+                </div>
+                <div className="text-summary-mobile-cell">
+                  <span className="tsm-value">{r.motor.toLocaleString("id-ID")}</span>
+                  <span className="tsm-label">Motor</span>
+                </div>
+                <div className="text-summary-mobile-cell">
+                  <span className="tsm-value">{r.bus.toLocaleString("id-ID")}</span>
+                  <span className="tsm-label">Bus</span>
+                </div>
+                <div className="text-summary-mobile-cell">
+                  <span className="tsm-value">{r.truk.toLocaleString("id-ID")}</span>
+                  <span className="tsm-label">Truk</span>
+                </div>
+                <div className="text-summary-mobile-cell">
+                  <span className="tsm-value">{r.kepadatan != null ? `${r.kepadatan}%` : "-"}</span>
+                  <span className="tsm-label">Kepadatan</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          {!textData.length && <p className="text-muted text-center py-3">Belum ada data pada periode ini.</p>}
         </div>
       </div>
 

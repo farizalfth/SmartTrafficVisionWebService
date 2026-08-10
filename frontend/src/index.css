@@ -1463,6 +1463,65 @@ footer {
 .admin-chart-select { width: 250px; }
 .admin-chart-card { height: 850px; display: flex; flex-direction: column; overflow: hidden; }
 
+/* ===== RINGKASAN DATA TEKS (Statistik & Analitik) ===== */
+.text-summary-card { height: auto; overflow: visible; }
+.text-summary-table-wrap { overflow-x: auto; }
+.text-summary-table { font-size: 0.82rem; }
+.text-summary-table th {
+  color: #9aa3b2;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: #2a2a2a;
+  padding: 10px 12px;
+  white-space: nowrap;
+}
+.text-summary-table td {
+  color: #d7dee9;
+  border-color: #2a2a2a;
+  padding: 9px 12px;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.text-summary-table tbody tr:hover { background: rgba(59, 130, 246, 0.06); }
+
+/* Kartu khusus mobile */
+.text-summary-mobile { display: flex; flex-direction: column; gap: 12px; }
+.text-summary-mobile-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 12px;
+}
+.text-summary-mobile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.text-summary-mobile-label { font-weight: 700; color: #e6edf7; font-size: 0.82rem; }
+.text-summary-mobile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.text-summary-mobile-cell {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 8px 6px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tsm-value { font-weight: 800; color: #fff; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.tsm-label { color: #9aa3b2; font-size: 0.6rem; }
+
 /* ===== CCTV CARDS: Daftar Titik CCTV ===== */
 .cctv-card-head {
   display: flex;
@@ -2463,5 +2522,12 @@ footer {
   /* Komentar admin */
   .comment-item { padding: 12px 14px; border-radius: 12px; }
   .comment-actions .btn { width: 30px; height: 30px; }
+
+  /* Ringkasan data teks — khusus admin mobile */
+  .text-summary-card { padding: 14px; }
+  .text-summary-mobile-card { padding: 11px; }
+  .text-summary-mobile-label { font-size: 0.78rem; }
+  .tsm-value { font-size: 0.82rem; }
+  .text-summary-mobile-cell { padding: 9px 4px; }
 }
 
