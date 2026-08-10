@@ -36,10 +36,10 @@ export default function Navbar({ admin = false }) {
           </Link>
           <div className="d-flex align-items-center gap-2">
             <Link className="btn btn-sm btn-outline-info rounded-pill" to="/" title="Lihat situs publik (keluar dari area admin)">
-              <i className="bi bi-globe me-1"></i>Lihat Situs
+              <i className="bi bi-globe me-1"></i><span className="admin-nav-txt">Lihat Situs</span>
             </Link>
             <button className="btn btn-sm btn-outline-light rounded-pill" onClick={logout}>
-              Logout
+              <i className="bi bi-box-arrow-right me-1"></i><span className="admin-nav-txt">Logout</span>
             </button>
           </div>
         </div>

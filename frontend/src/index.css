@@ -1756,6 +1756,14 @@ footer {
   .navbar { padding: 8px 0; }
   .navbar-brand { font-size: 1.1rem; }
 
+  /* Navbar admin: padat & presisi di HP */
+  .admin-nav { padding: 8px 0; }
+  .admin-nav .navbar-brand { flex-shrink: 0; gap: 8px; font-size: 1rem; letter-spacing: 0.5px; }
+  .admin-nav .brand-icon { width: 32px; height: 32px; font-size: 1.05rem; border-radius: 9px; }
+  .admin-nav .d-flex { flex-wrap: nowrap; gap: 6px !important; }
+  .admin-nav .btn { white-space: nowrap; padding: 4px 11px; font-size: 0.76rem; line-height: 1.4; }
+  .admin-nav .btn i { font-size: 0.9rem; }
+
   /* Hero beranda */
   .hero-title { font-size: 2.2rem !important; }
   .hero-subtitle { font-size: 1rem !important; margin-bottom: 28px !important; }
@@ -2363,6 +2371,11 @@ footer {
   .dash-hero-title { font-size: 1.35rem; }
   .live-status-value { font-size: 1rem; }
   .video-container iframe, .video-container img { height: 170px !important; }
+
+  /* Navbar admin: cukup ikon agar tidak meluber di layar sangat kecil */
+  .admin-nav .admin-nav-txt { display: none; }
+  .admin-nav .btn i { margin-right: 0 !important; }
+  .admin-nav .btn { padding: 5px 9px; }
 
   /* Kartu Daftar Titik CCTV lebih padat di layar sangat kecil */
   .cctv-card .camera-name { font-size: 0.74rem; }
