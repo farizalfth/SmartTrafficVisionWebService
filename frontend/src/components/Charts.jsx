@@ -237,7 +237,30 @@ export function VehicleDoughnut({ data = [], size = 280 }) {
   );
 }
 
-export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [] }) {
+const COMMENT_COLORS = {
+  baik: { top: "#5CF3B2", bottom: "rgba(0,168,107,0.16)", border: "#00C853", hover: "#00E676" },
+  netral: { top: "#E2E8F0", bottom: "rgba(148,163,184,0.16)", border: "#94A3B8", hover: "#CBD5E1" },
+  buruk: { top: "#FF8A80", bottom: "rgba(229,57,53,0.16)", border: "#FF5252", hover: "#FF6E6E" },
+};
+
+function commentDataset(label, data, color, barPercentage, categoryPercentage) {
+  return {
+    label,
+    data,
+    backgroundColor: (ctx) => barGradient(ctx, color.top, color.bottom),
+    borderColor: color.border,
+    borderWidth: 1.5,
+    borderRadius: { topLeft: 7, topRight: 7, bottomLeft: 7, bottomRight: 7 },
+    borderSkipped: false,
+    hoverBackgroundColor: color.hover,
+    hoverBorderColor: color.hover,
+    maxBarThickness: 32,
+    barPercentage,
+    categoryPercentage,
+  };
+}
+
+export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [], total = 0 }) {
   const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
   useEffect(() => {
     const onResize = () => setVw(window.innerWidth);
@@ -245,10 +268,11 @@ export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [
     return () => window.removeEventListener("resize", onResize);
   }, []);
   const isSmall = vw <= 576;
+  const hasData = labels.length > 0 && total > 0;
 
   const multiLabels = labels.map((label, i) => [
     label,
-    "──────────",
+    "──────",
     `Baik : ${baik[i] || 0}`,
     `Netral : ${netral[i] || 0}`,
     `Buruk : ${buruk[i] || 0}`,
@@ -258,36 +282,9 @@ export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [
   const data = {
     labels: multiLabels,
     datasets: [
-      {
-        label: "Puas (Baik)",
-        data: baik,
-        backgroundColor: "rgba(59,130,246,0.7)",
-        borderColor: "#3B82F6",
-        borderWidth: 1.5,
-        borderRadius: 6,
-        barPercentage: isSmall ? 0.5 : 0.6,
-        categoryPercentage: isSmall ? 0.4 : 0.5,
-      },
-      {
-        label: "Netral",
-        data: netral,
-        backgroundColor: "rgba(148,163,184,0.7)",
-        borderColor: "#94A3B8",
-        borderWidth: 1.5,
-        borderRadius: 6,
-        barPercentage: isSmall ? 0.5 : 0.6,
-        categoryPercentage: isSmall ? 0.4 : 0.5,
-      },
-      {
-        label: "Laporan (Buruk)",
-        data: buruk,
-        backgroundColor: "rgba(255,82,82,0.7)",
-        borderColor: "#FF5252",
-        borderWidth: 1.5,
-        borderRadius: 6,
-        barPercentage: isSmall ? 0.5 : 0.6,
-        categoryPercentage: isSmall ? 0.4 : 0.5,
-      },
+      commentDataset("Puas (Baik)", baik, COMMENT_COLORS.baik, isSmall ? 0.55 : 0.6, isSmall ? 0.45 : 0.5),
+      commentDataset("Netral", netral, COMMENT_COLORS.netral, isSmall ? 0.55 : 0.6, isSmall ? 0.45 : 0.5),
+      commentDataset("Laporan (Buruk)", buruk, COMMENT_COLORS.buruk, isSmall ? 0.55 : 0.6, isSmall ? 0.45 : 0.5),
     ],
   };
 
@@ -298,12 +295,18 @@ export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [
         options={{
           responsive: true,
           maintainAspectRatio: false,
+          layout: { padding: { top: 10, right: 6, bottom: 6, left: 4 } },
+          animation: {
+            duration: 800,
+            easing: "easeOutQuart",
+            animateScale: true,
+          },
           scales: {
             x: {
               stacked: false,
               ticks: {
                 color: "#fff",
-                font: { size: isSmall ? 8 : 11 },
+                font: { size: isSmall ? 8 : 11, weight: "600" },
                 lineHeight: isSmall ? 1.4 : 1.5,
                 padding: 6,
                 maxRotation: 0,
@@ -311,17 +314,21 @@ export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [
                 autoSkip: false,
               },
               grid: { display: false },
+              border: { display: false },
             },
             y: {
               beginAtZero: true,
+              grace: "5%",
               ticks: {
                 color: "#94a3b8",
                 precision: 0,
                 maxTicksLimit: 6,
                 font: { size: isSmall ? 10 : 12 },
+                padding: 8,
                 callback: (v) => Number(v).toLocaleString("id-ID"),
               },
-              grid: { color: "rgba(255,255,255,0.05)" },
+              grid: { color: "rgba(255,255,255,0.05)", drawTicks: false },
+              border: { display: false },
             },
           },
           plugins: {
@@ -337,16 +344,47 @@ export function CommentBarChart({ labels = [], baik = [], netral = [], buruk = [
                     padding: 8,
                   },
                 }
-              : legendStyle,
+              : {
+                  ...legendStyle,
+                  position: "bottom",
+                },
             tooltip: {
               ...tooltipStyle,
               callbacks: {
+                title: (items) => {
+                  const i = items[0]?.dataIndex;
+                  const sum = (baik[i] || 0) + (netral[i] || 0) + (buruk[i] || 0);
+                  return `${labels[i] || ""} — ${sum} ulasan`;
+                },
                 label: (ctx) => ` ${ctx.dataset.label} : ${ctx.parsed.y}`,
+                footer: (items) => {
+                  const i = items[0]?.dataIndex;
+                  const sum = (baik[i] || 0) + (netral[i] || 0) + (buruk[i] || 0);
+                  return `Total ${sum} ulasan masuk`;
+                },
+                labelTextColor: () => "#e0e0e0",
               },
             },
           },
         }}
       />
+      {!hasData && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(15,15,15,0.4)",
+            borderRadius: 14,
+          }}
+        >
+          <i className="bi bi-inbox" style={{ fontSize: 34, color: "#94a3b8", opacity: 0.7 }}></i>
+          <p className="mb-0 mt-2 small text-muted">Belum ada ulasan pada periode ini.</p>
+        </div>
+      )}
     </div>
   );
 }

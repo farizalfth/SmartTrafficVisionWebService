@@ -290,12 +290,27 @@ def fetch_cctv_list():
     return sorted(cameras, key=lambda c: c["id"])
 
 
+def find_cctv(cctv_id):
+    """Cari CCTV berdasarkan id (terima '1' maupun 'c1')."""
+    if cctv_id is None:
+        return None
+    cctv_id = str(cctv_id)
+    cleaned = cctv_id.lstrip("c")
+    for c in fetch_cctv_list():
+        if str(c["id"]) == cleaned:
+            return c
+    return None
+
+
 def generate_live_stream(cctv):
     """Streaming MJPEG hasil deteksi + tulis data real-time ke Firebase."""
     cctv_id = cctv["id"]
     if cap_from_youtube is None:
         raise RuntimeError("cap_from_youtube tidak tersedia")
     cap = cap_from_youtube(cctv["youtube_link"], "360p")
+    if not cap.isOpened():
+        cap.release()
+        raise RuntimeError("Gagal membuka stream YouTube (mungkin offline)")
     last_accumulate_time = 0
     cfg = get_camera_config(cctv)
     tracker = SpeedTracker(cfg["px_per_m"])
@@ -408,8 +423,7 @@ def generate_live_stream(cctv):
 
 @app.route("/video_feed")
 def video_feed():
-    cctv_id = request.args.get("cctv_id")
-    target = next((c for c in fetch_cctv_list() if str(c["id"]) == str(cctv_id)), None)
+    target = find_cctv(request.args.get("cctv_id"))
     if not target:
         return "CCTV tidak ditemukan", 404
     try:
@@ -423,8 +437,7 @@ def video_feed():
 
 @app.route("/api/analyze_cctv")
 def analyze_cctv():
-    cctv_id = request.args.get("cctv_id")
-    target = next((c for c in fetch_cctv_list() if str(c["id"]) == str(cctv_id)), None)
+    target = find_cctv(request.args.get("cctv_id"))
     if not target:
         return jsonify({"error": "Not Found"}), 404
 
@@ -757,4 +770,4 @@ def detection_loop():
 
 if __name__ == "__main__":
     threading.Thread(target=detection_loop, daemon=True).start()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)

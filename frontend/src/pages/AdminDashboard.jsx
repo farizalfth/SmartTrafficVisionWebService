@@ -70,6 +70,7 @@ export default function AdminDashboard() {
   const [textData, setTextData] = useState([]);
   const [vehicle, setVehicle] = useState({ data: [0, 0, 0, 0], percentages: ["0%", "0%", "0%", "0%"] });
   const [comments, setComments] = useState([]);
+  const [commentPeriod, setCommentPeriod] = useState(null);
   const [server, setServer] = useState({});
   const [clock, setClock] = useState(Date.now());
   const [zone, setZone] = useState(() => localStorage.getItem("adminClockZone") || "WIB");
@@ -308,7 +309,19 @@ export default function AdminDashboard() {
     }
   };
 
-  const commentData = useMemoComments(comments);
+  const commentData = aggComments(comments, commentPeriod);
+  const chartTotal = commentData.baik.reduce((a, b) => a + b, 0) + commentData.netral.reduce((a, b) => a + b, 0) + commentData.buruk.reduce((a, b) => a + b, 0);
+  const commentCounts = {
+    baik: commentData.baik.reduce((a, b) => a + b, 0),
+    netral: commentData.netral.reduce((a, b) => a + b, 0),
+    buruk: commentData.buruk.reduce((a, b) => a + b, 0),
+  };
+  const sortedComments = [...comments].sort((a, b) => {
+    const va = visibleEpoch(a);
+    const vb = visibleEpoch(b);
+    if (va != null && vb != null && va !== vb) return vb - va;
+    return commentEpoch(b) - commentEpoch(a);
+  });
   const filteredCameras = cctv.filter(
     (c) =>
       c.name.toLowerCase().includes(cameraSearch.toLowerCase()) ||
@@ -706,9 +719,58 @@ export default function AdminDashboard() {
           <div className="dashboard-card">
             <div className="card-header-custom">
               <h4>Tren Ulasan Masuk</h4>
-              <i className="bi bi-graph-up-arrow gradient-icon" style={{ color: "#ffd600" }}></i>
+              <div className="period-toggle">
+                {[
+                  { key: "harian", label: "Hari" },
+                  { key: "mingguan", label: "Minggu" },
+                  { key: "bulanan", label: "Bulan" },
+                ].map((p) => (
+                  <button key={p.key} className={commentPeriod === p.key ? "active" : ""} onClick={() => setCommentPeriod(p.key)}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <CommentBarChart labels={commentData.labels} baik={commentData.baik} netral={commentData.netral} buruk={commentData.buruk} />
+            {commentPeriod ? (
+              <>
+                <div className="comment-stats">
+                  <div className="comment-stats-item">
+                    <span className="comment-stats-ico" style={{ background: "linear-gradient(135deg,#7CB9FF,#2563EB)" }}><i className="bi bi-chat-dots"></i></span>
+                    <div>
+                      <span className="comment-stats-value">{chartTotal.toLocaleString("id-ID")}</span>
+                      <span className="comment-stats-label">Total Ulasan</span>
+                    </div>
+                  </div>
+                  <div className="comment-stats-item">
+                    <span className="comment-stats-ico" style={{ background: "linear-gradient(135deg,#5CF3B2,#00A86B)" }}><i className="bi bi-hand-thumbs-up"></i></span>
+                    <div>
+                      <span className="comment-stats-value">{commentCounts.baik.toLocaleString("id-ID")}</span>
+                      <span className="comment-stats-label">Puas (Baik)</span>
+                    </div>
+                  </div>
+                  <div className="comment-stats-item">
+                    <span className="comment-stats-ico" style={{ background: "linear-gradient(135deg,#E2E8F0,#64748B)" }}><i className="bi bi-dash-circle"></i></span>
+                    <div>
+                      <span className="comment-stats-value">{commentCounts.netral.toLocaleString("id-ID")}</span>
+                      <span className="comment-stats-label">Netral</span>
+                    </div>
+                  </div>
+                  <div className="comment-stats-item">
+                    <span className="comment-stats-ico" style={{ background: "linear-gradient(135deg,#FF8A80,#E53935)" }}><i className="bi bi-exclamation-triangle"></i></span>
+                    <div>
+                      <span className="comment-stats-value">{commentCounts.buruk.toLocaleString("id-ID")}</span>
+                      <span className="comment-stats-label">Laporan (Buruk)</span>
+                    </div>
+                  </div>
+                </div>
+                <CommentBarChart labels={commentData.labels} baik={commentData.baik} netral={commentData.netral} buruk={commentData.buruk} total={chartTotal} />
+              </>
+            ) : (
+              <div className="text-center text-muted" style={{ padding: "60px 20px" }}>
+                <i className="bi bi-graph-up-arrow" style={{ fontSize: 40, color: "#3b82f6", opacity: 0.5 }}></i>
+                <p className="mt-3 mb-0">Pilih periode <b style={{ color: "#fff" }}>Hari / Minggu / Bulan</b> untuk menampilkan tren ulasan masuk.</p>
+              </div>
+            )}
           </div>
         </div>
         <div className="col-lg-6">
@@ -723,7 +785,7 @@ export default function AdminDashboard() {
               </button>
             </div>
             <div style={{ maxHeight: 400, overflowY: "auto" }}>
-              {comments.slice(0, 20).map((c) => (
+              {sortedComments.slice(0, 20).map((c) => (
                 <div key={c.key} className="comment-item">
                   <div className="d-flex justify-content-between align-items-center gap-2">
                     <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
@@ -1009,21 +1071,71 @@ function formatClockDate(epochMs, zone) {
   return `${DAYS[p.day]}, ${p.date} ${MONTHS[p.month]} ${p.year} (UTC+${ZONES[zone].utc})`;
 }
 
-function useMemoComments(comments) {
-  const byDate = {};
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+// Epoch (ms) dari timestamp (mendukung detik maupun milidetik) bila valid;
+// fallback ke tanggal+jam (YYYY-MM-DD HH:MM:SS).
+function commentEpoch(c) {
+  const ts = Number(c.timestamp);
+  if (Number.isFinite(ts) && ts > 0) return ts < 1e11 ? ts * 1000 : ts;
+  const v = visibleEpoch(c);
+  return v == null ? 0 : v;
+}
+
+// Epoch (ms) dari tanggal+jam yang ditampilkan; null bila tanggal tidak bisa diparsing.
+function visibleEpoch(c) {
+  const m = String(c.tanggal || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const j = String(c.jam || "").match(/^(\d{2}):(\d{2}):(\d{2})/);
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], j ? +j[1] : 0, j ? +j[2] : 0, j ? +j[3] : 0);
+}
+
+// Info minggu ISO (mulai Senin): key "YYYY-Www" + label rentang tanggal.
+function weekInfo(tgl) {
+  const m = String(tgl || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return { key: "Data Lama", label: "Data Lama" };
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const year = d.getUTCFullYear();
+  const iso = Math.ceil(((d - Date.UTC(year, 0, 4)) / 86400000 + 1) / 7);
+  const mon = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  mon.setUTCDate(mon.getUTCDate() - ((mon.getUTCDay() || 7) - 1));
+  const sun = new Date(mon);
+  sun.setUTCDate(sun.getUTCDate() + 6);
+  const f = (x) => `${String(x.getUTCDate()).padStart(2, "0")}/${String(x.getUTCMonth() + 1).padStart(2, "0")}`;
+  return { key: `${year}-W${String(iso).padStart(2, "0")}`, label: `${f(mon)} - ${f(sun)}` };
+}
+
+// Agregasi ulasan per hari / minggu / bulan untuk grafik tren.
+function aggComments(comments, period) {
+  const byKey = {};
   comments.forEach((c) => {
-    const tgl = c.tanggal || "Data Lama";
-    if (!byDate[tgl]) byDate[tgl] = { Baik: 0, Buruk: 0, Netral: 0 };
-    if (c.sentimen === "Baik") byDate[tgl].Baik += 1;
-    else if (c.sentimen === "Buruk") byDate[tgl].Buruk += 1;
-    else byDate[tgl].Netral += 1;
+    let key, label;
+    if (period === "bulanan") {
+      const y = String(c.tanggal || "").slice(0, 4);
+      const mo = Number(String(c.tanggal || "").slice(5, 7));
+      key = String(c.tanggal || "Data Lama").slice(0, 7);
+      label = c.tanggal ? `${SHORT_MONTHS[mo - 1] || "?"} ${y}` : "Data Lama";
+    } else if (period === "mingguan") {
+      const w = weekInfo(c.tanggal);
+      key = w.key;
+      label = w.label;
+    } else {
+      key = c.tanggal || "Data Lama";
+      label = key;
+    }
+    if (!byKey[key]) byKey[key] = { label, Baik: 0, Buruk: 0, Netral: 0 };
+    if (c.sentimen === "Baik") byKey[key].Baik += 1;
+    else if (c.sentimen === "Buruk") byKey[key].Buruk += 1;
+    else byKey[key].Netral += 1;
   });
-  const labels = Object.keys(byDate).sort();
+  const keys = Object.keys(byKey).sort();
   return {
-    labels,
-    baik: labels.map((d) => byDate[d].Baik),
-    buruk: labels.map((d) => byDate[d].Buruk),
-    netral: labels.map((d) => byDate[d].Netral),
+    labels: keys.map((k) => byKey[k].label),
+    baik: keys.map((k) => byKey[k].Baik),
+    buruk: keys.map((k) => byKey[k].Buruk),
+    netral: keys.map((k) => byKey[k].Netral),
   };
 }
 

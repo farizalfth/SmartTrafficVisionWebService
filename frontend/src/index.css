@@ -391,6 +391,47 @@ a {
   border-radius: 8px;
 }
 
+/* ===== COMMENT CHART STATS ===== */
+.comment-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.comment-stats-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(145deg, #161616, #111111);
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  min-width: 0;
+}
+.comment-stats-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.comment-stats-value {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.15;
+}
+.comment-stats-label {
+  display: block;
+  font-size: 0.68rem;
+  color: #9aa3b2;
+  white-space: nowrap;
+}
+
 .chart-card {
   background-color: var(--bg-card);
   border-radius: 16px;
@@ -1989,6 +2030,7 @@ footer {
   /* Komentar admin */
   .comment-item { flex-direction: column; align-items: stretch; gap: 8px; }
   .comment-actions { justify-content: flex-end; }
+  .comment-stats { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 576px) {
@@ -1998,6 +2040,10 @@ footer {
   .scroll-indicator { display: none; }
   .period-toggle { width: 100%; justify-content: space-between; }
   .period-toggle button { flex: 1; padding: 6px 8px; font-size: 0.75rem; }
+  .comment-stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .comment-stats-item { padding: 8px 10px; gap: 8px; }
+  .comment-stats-ico { width: 32px; height: 32px; }
+  .comment-stats-value { font-size: 0.95rem; }
   .read-search { max-width: 100%; }
   .zone-toggle button { padding: 5px 10px; }
   .server-clock-date { font-size: 0.7rem; }
