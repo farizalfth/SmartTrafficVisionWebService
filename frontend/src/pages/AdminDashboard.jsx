@@ -597,6 +597,100 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* TABEL DETAIL KENDARAAN */}
+      <div className="dashboard-card text-summary-card mb-4">
+        <div className="card-header-custom">
+          <h4>Tabel Detail Kendaraan</h4>
+          <span className="badge rounded-pill text-dark fw-bold" style={{ backgroundColor: "#0dcaf0", padding: "6px 15px" }}>REAL TIME</span>
+        </div>
+
+        {/* Tabel desktop */}
+        <div className="text-summary-table-wrap d-none d-md-block">
+          <table className="table table-dark table-striped align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Periode</th>
+                <th className="text-end">Mobil</th>
+                <th className="text-end">Motor</th>
+                <th className="text-end">Bus</th>
+                <th className="text-end">Truk</th>
+                <th className="text-end">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {traffic.labels.map((lbl, i) => {
+                const label = Array.isArray(lbl) ? lbl.join(" · ") : lbl;
+                const vals = ["mobil", "motor", "bus", "truk"].map((k) => traffic.datasets[k]?.[i] || 0);
+                const total = vals.reduce((a, b) => a + b, 0);
+                return (
+                  <tr key={i}>
+                    <td className="fw-bold" style={{ color: "#e6edf7" }}>{label}</td>
+                    {vals.map((v, j) => <td key={j} className="text-end text-muted">{v.toLocaleString("id-ID")}</td>)}
+                    <td className="text-end fw-bold" style={{ color: "#3b82f6" }}>{total.toLocaleString("id-ID")}</td>
+                  </tr>
+                );
+              })}
+              {!traffic.labels.length && (
+                <tr><td colSpan={6} className="text-center text-muted">Belum ada data.</td></tr>
+              )}
+            </tbody>
+            {traffic.labels.length > 0 && (
+              <tfoot>
+                <tr style={{ borderTop: "2px solid #0dcaf0" }}>
+                  <td className="fw-bold">Total</td>
+                  {["mobil", "motor", "bus", "truk"].map((k) => {
+                    const v = (traffic.datasets[k] || []).reduce((a, b) => a + (b || 0), 0);
+                    return <td key={k} className="text-end">{v.toLocaleString("id-ID")}</td>;
+                  })}
+                  <td className="text-end fw-bold" style={{ color: "#0dcaf0" }}>
+                    {traffic.labels.reduce((a, _, i) => a + ["mobil", "motor", "bus", "truk"].reduce((s, k) => s + (traffic.datasets[k]?.[i] || 0), 0), 0).toLocaleString("id-ID")}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+
+        {/* Kartu khusus mobile */}
+        <div className="text-summary-mobile d-md-none">
+          {traffic.labels.map((lbl, i) => {
+            const label = Array.isArray(lbl) ? lbl.join(" · ") : lbl;
+            const vals = ["mobil", "motor", "bus", "truk"].map((k) => traffic.datasets[k]?.[i] || 0);
+            const total = vals.reduce((a, b) => a + b, 0);
+            return (
+              <div className="text-summary-mobile-card" key={i}>
+                <div className="text-summary-mobile-head">
+                  <span className="text-summary-mobile-label">{label}</span>
+                </div>
+                <div className="text-summary-mobile-grid">
+                  <div className="text-summary-mobile-cell">
+                    <span className="tsm-value">{vals[0].toLocaleString("id-ID")}</span>
+                    <span className="tsm-label">Mobil</span>
+                  </div>
+                  <div className="text-summary-mobile-cell">
+                    <span className="tsm-value">{vals[1].toLocaleString("id-ID")}</span>
+                    <span className="tsm-label">Motor</span>
+                  </div>
+                  <div className="text-summary-mobile-cell">
+                    <span className="tsm-value">{vals[2].toLocaleString("id-ID")}</span>
+                    <span className="tsm-label">Bus</span>
+                  </div>
+                  <div className="text-summary-mobile-cell">
+                    <span className="tsm-value">{vals[3].toLocaleString("id-ID")}</span>
+                    <span className="tsm-label">Truk</span>
+                  </div>
+                  <div className="text-summary-mobile-cell tsm-wide" style={{ background: "rgba(13,202,240,0.12)", borderColor: "rgba(13,202,240,0.35)" }}>
+                    <span className="tsm-value" style={{ color: "#0dcaf0" }}>{total.toLocaleString("id-ID")}</span>
+                    <span className="tsm-label" style={{ color: "#7dd3fc" }}>Total</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {!traffic.labels.length && <p className="text-muted text-center py-3">Belum ada data.</p>}
+        </div>
+      </div>
+
       {/* KOMENTAR ANALITIK */}
       <div className="row g-4 mb-5">
         <div className="col-lg-6">
