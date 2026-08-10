@@ -1522,6 +1522,11 @@ footer {
 .tsm-value { font-weight: 800; color: #fff; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
 .tsm-label { color: #9aa3b2; font-size: 0.6rem; }
 .text-summary-mobile-cell.tsm-wide { grid-column: span 2; }
+.text-summary-mobile-total {
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+.text-summary-mobile-total .text-summary-mobile-label { color: #93c5fd; }
 
 /* ===== CCTV CARDS: Daftar Titik CCTV ===== */
 .cctv-card-head {
@@ -2524,11 +2529,13 @@ footer {
   .comment-item { padding: 12px 14px; border-radius: 12px; }
   .comment-actions .btn { width: 30px; height: 30px; }
 
-  /* Ringkasan data teks — khusus admin mobile */
+  /* Ringkasan data kendaraan — khusus admin mobile */
   .text-summary-card { padding: 14px; }
   .text-summary-mobile-card { padding: 11px; }
   .text-summary-mobile-label { font-size: 0.78rem; }
   .tsm-value { font-size: 0.82rem; }
   .text-summary-mobile-cell { padding: 9px 4px; }
+  .text-summary-table th,
+  .text-summary-table td { padding: 8px 10px; }
 }
 
