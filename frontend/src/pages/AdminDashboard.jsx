@@ -23,6 +23,12 @@ const VEHICLE_META = [
   { name: "Bus", color: "linear-gradient(135deg, #5CF3B2, #00A86B)" },
   { name: "Truk", color: "linear-gradient(135deg, #FF7A70, #E53935)" },
 ];
+const TYPE_META = [
+  { key: "mobil", name: "Mobil", color: "#3B82F6", icon: "bi-car-front" },
+  { key: "motor", name: "Motor", color: "#FFC400", icon: "bi-bicycle" },
+  { key: "bus", name: "Bus", color: "#00A86B", icon: "bi-bus-front" },
+  { key: "truk", name: "Truk", color: "#E53935", icon: "bi-truck" },
+];
 
 const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -314,6 +320,15 @@ export default function AdminDashboard() {
   const serverColor = isOnline ? signalColor(stability) : "#FF5252";
   const showDensity = chartId !== "all";
 
+  const totalKendaraan = textData.reduce((a, r) => a + (r.total || 0), 0);
+  const totalByType = TYPE_META.map((t) => ({ ...t, value: textData.reduce((a, r) => a + (r[t.key] || 0), 0) }));
+  const avgKep = (() => {
+    const rows = textData.filter((r) => r.kepadatan != null);
+    return rows.length ? Math.round(rows.reduce((a, r) => a + r.kepadatan, 0) / rows.length) : null;
+  })();
+  const avgStatus = avgKep != null ? (avgKep < 30 ? "Lancar" : avgKep < 55 ? "Padat" : "Macet") : null;
+  const lastDetAll = latestDet(textData);
+
   const renderSignalBar = (s) => {
     const val = s.online ? Number(s.signal) || 0 : 0;
     const color = signalColor(val);
@@ -600,35 +615,43 @@ export default function AdminDashboard() {
                   <span className="text-muted small fw-bold">-</span>
                 ))}
               </div>
-              <div className="text-summary-mobile-grid">
-                <div className="text-summary-mobile-cell">
-                  <span className="tsm-value" style={{ color: "#3b82f6" }}>{r.total.toLocaleString("id-ID")}</span>
-                  <span className="tsm-label">Total</span>
+
+              <div className="tsm-mobile-total">
+                <span className="tsm-mobile-total-ico"><i className="bi bi-car-front"></i></span>
+                <div className="tsm-mobile-total-main">
+                  <span className="tsm-mobile-total-value">{r.total.toLocaleString("id-ID")}</span>
+                  <span className="tsm-mobile-total-label">Total Kendaraan</span>
                 </div>
-                <div className="text-summary-mobile-cell">
-                  <span className="tsm-value">{r.mobil.toLocaleString("id-ID")}</span>
-                  <span className="tsm-label">Mobil</span>
-                </div>
-                <div className="text-summary-mobile-cell">
-                  <span className="tsm-value">{r.motor.toLocaleString("id-ID")}</span>
-                  <span className="tsm-label">Motor</span>
-                </div>
-                <div className="text-summary-mobile-cell">
-                  <span className="tsm-value">{r.bus.toLocaleString("id-ID")}</span>
-                  <span className="tsm-label">Bus</span>
-                </div>
-                <div className={`text-summary-mobile-cell ${showDensity ? "" : "tsm-wide"}`}>
-                  <span className="tsm-value">{r.truk.toLocaleString("id-ID")}</span>
-                  <span className="tsm-label">Truk</span>
-                </div>
-                {showDensity && (
-                  <div className="text-summary-mobile-cell" title={r.lastDet ? `Kepadatan ${r.kepadatan != null ? `${r.kepadatan}%` : "-"} • deteksi terakhir ${r.lastDet}` : "Belum ada data deteksi"}>
-                    <span className="tsm-value">{r.kepadatan != null ? `${r.kepadatan}%` : "-"}</span>
-                    {r.lastDet ? <span className="tsm-sub" style={{ color: "#93c5fd" }}>{fmtDetTime(r.lastDet)}</span> : null}
-                    <span className="tsm-label">Kepadatan</span>
-                  </div>
-                )}
               </div>
+
+              <div className="tsm-mobile-types">
+                {TYPE_META.map((t) => (
+                  <div className="tsm-mobile-type" key={t.key}>
+                    <span className="tsm-mobile-type-ico" style={{ background: t.color }}><i className={`bi ${t.icon}`}></i></span>
+                    <div className="tsm-mobile-type-main">
+                      <span className="tsm-mobile-type-value">{r[t.key].toLocaleString("id-ID")}</span>
+                      <span className="tsm-mobile-type-label">{t.name}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {showDensity && (
+                <div className="tsm-mobile-dens">
+                  <div className="tsm-mobile-dens-head">
+                    <span className="tsm-mobile-dens-label"><i className="bi bi-activity me-1"></i>Kepadatan</span>
+                    <span className="tsm-mobile-dens-value" style={{ color: r.status ? statusColor(r.status) : "#9aa3b2" }}>
+                      {r.kepadatan != null ? `${r.kepadatan}%` : "-"}
+                    </span>
+                  </div>
+                  <div className="tsm-mobile-dens-track">
+                    <div className="tsm-mobile-dens-fill" style={{ width: `${Math.min(100, r.kepadatan ?? 0)}%`, background: r.status ? statusColor(r.status) : "#9aa3b2" }}></div>
+                  </div>
+                  {r.lastDet && (
+                    <div className="tsm-mobile-dens-time"><i className="bi bi-clock me-1"></i>Deteksi terakhir {fmtDetTime(r.lastDet)}</div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           {!textData.length && <p className="text-muted text-center py-3">Belum ada data pada periode ini.</p>}
@@ -636,39 +659,42 @@ export default function AdminDashboard() {
             <div className="text-summary-mobile-card text-summary-mobile-total">
               <div className="text-summary-mobile-head">
                 <span className="text-summary-mobile-label">Total Semua Periode</span>
+                <i className="bi bi-stars" style={{ color: "#FFD600" }}></i>
               </div>
-              <div className="text-summary-mobile-grid">
-                <div className="text-summary-mobile-cell tsm-wide" style={{ background: "rgba(59,130,246,0.15)", borderColor: "rgba(59,130,246,0.35)" }}>
-                  <span className="tsm-value" style={{ color: "#3b82f6" }}>{textData.reduce((a, r) => a + (r.total || 0), 0).toLocaleString("id-ID")}</span>
-                  <span className="tsm-label" style={{ color: "#93c5fd" }}>Total Kendaraan</span>
+              <div className="tsm-mobile-total">
+                <span className="tsm-mobile-total-ico"><i className="bi bi-car-front"></i></span>
+                <div className="tsm-mobile-total-main">
+                  <span className="tsm-mobile-total-value">{totalKendaraan.toLocaleString("id-ID")}</span>
+                  <span className="tsm-mobile-total-label">Total Kendaraan</span>
                 </div>
-                <div className="text-summary-mobile-cell">
-                  <span className="tsm-value">{textData.reduce((a, r) => a + (r.mobil || 0), 0).toLocaleString("id-ID")}</span>
-                  <span className="tsm-label">Mobil</span>
-                </div>
-                <div className="text-summary-mobile-cell">
-                  <span className="tsm-value">{textData.reduce((a, r) => a + (r.motor || 0), 0).toLocaleString("id-ID")}</span>
-                  <span className="tsm-label">Motor</span>
-                </div>
-                <div className="text-summary-mobile-cell">
-                  <span className="tsm-value">{textData.reduce((a, r) => a + (r.bus || 0), 0).toLocaleString("id-ID")}</span>
-                  <span className="tsm-label">Bus</span>
-                </div>
-                <div className="text-summary-mobile-cell">
-                  <span className="tsm-value">{textData.reduce((a, r) => a + (r.truk || 0), 0).toLocaleString("id-ID")}</span>
-                  <span className="tsm-label">Truk</span>
-                </div>
-                {showDensity && (
-                  <div className="text-summary-mobile-cell" title={latestDet(textData) ? `Deteksi terakhir ${latestDet(textData)}` : "Belum ada data deteksi"}>
-                    <span className="tsm-value">{(() => {
-                      const rows = textData.filter((r) => r.kepadatan != null);
-                      return rows.length ? `${Math.round(rows.reduce((a, r) => a + r.kepadatan, 0) / rows.length)}%` : "-";
-                    })()}</span>
-                    {latestDet(textData) ? <span className="tsm-sub" style={{ color: "#93c5fd" }}>{fmtDetTime(latestDet(textData))}</span> : null}
-                    <span className="tsm-label">Rata-rata Kepadatan</span>
+              </div>
+              <div className="tsm-mobile-types">
+                {totalByType.map((t) => (
+                  <div className="tsm-mobile-type" key={t.key}>
+                    <span className="tsm-mobile-type-ico" style={{ background: t.color }}><i className={`bi ${t.icon}`}></i></span>
+                    <div className="tsm-mobile-type-main">
+                      <span className="tsm-mobile-type-value">{t.value.toLocaleString("id-ID")}</span>
+                      <span className="tsm-mobile-type-label">{t.name}</span>
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
+              {showDensity && (
+                <div className="tsm-mobile-dens">
+                  <div className="tsm-mobile-dens-head">
+                    <span className="tsm-mobile-dens-label"><i className="bi bi-activity me-1"></i>Rata-rata Kepadatan</span>
+                    <span className="tsm-mobile-dens-value" style={{ color: avgStatus ? statusColor(avgStatus) : "#9aa3b2" }}>
+                      {avgKep != null ? `${avgKep}%` : "-"}
+                    </span>
+                  </div>
+                  <div className="tsm-mobile-dens-track">
+                    <div className="tsm-mobile-dens-fill" style={{ width: `${Math.min(100, avgKep ?? 0)}%`, background: avgStatus ? statusColor(avgStatus) : "#9aa3b2" }}></div>
+                  </div>
+                  {lastDetAll && (
+                    <div className="tsm-mobile-dens-time"><i className="bi bi-clock me-1"></i>Deteksi terakhir {fmtDetTime(lastDetAll)}</div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
