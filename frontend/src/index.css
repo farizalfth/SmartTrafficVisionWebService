@@ -1521,6 +1521,7 @@ footer {
 }
 .tsm-value { font-weight: 800; color: #fff; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
 .tsm-label { color: #9aa3b2; font-size: 0.6rem; }
+.tsm-sub { font-size: 0.56rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .text-summary-mobile-cell.tsm-wide { grid-column: span 2; }
 .text-summary-mobile-total {
   background: rgba(59, 130, 246, 0.06);

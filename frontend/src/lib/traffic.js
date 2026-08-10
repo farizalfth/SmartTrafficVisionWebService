@@ -87,8 +87,18 @@ export async function buildTrafficData(cctvId, period = "harian") {
   return { labels, datasets: { mobil: dataMobil, motor: dataMotor, bus: dataBus, truk: dataTruk } };
 }
 
-// Ringkasan data teks per periode (harian / mingguan / bulanan).
-// Menghasilkan baris: { label, total, mobil, motor, bus, truk, kepadatan, status }.
+// Konversi "DD-MM-YYYY HH:MM:SS" (WIB) ke epoch untuk perbandingan waktu deteksi.
+function detToEpoch(s) {
+  const m = String(s).match(/(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+  if (!m) return null;
+  return Date.UTC(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +m[6]);
+}
+
+// Ringkasan data per periode (harian / mingguan / bulanan).
+// Menghasilkan baris: { label, total, mobil, motor, bus, truk, kepadatan, status, lastDet }.
+// lastDet = jam deteksi terakhir pada periode tersebut (sesuai database, format DD-MM-YYYY HH:MM:SS).
+// Kepadatan/status hanya dihitung untuk tampilan per CCTV (berbasis data per detik);
+// saat "Semua CCTV" nilai kepadatan, status, dan lastDet null (data jumlah kendaraan saja).
 export async function buildTextSummaries(cctvId, period = "harian") {
   const stats = await getTrafficStats();
   const nodes = cctvId ? { [String(cctvId)]: stats[cctvId] || {} } : nodesMap(stats);
@@ -100,7 +110,7 @@ export async function buildTextSummaries(cctvId, period = "harian") {
     let total = 0;
     const sum = { mobil: 0, motor: 0, bus: 0, truk: 0 };
     let kepSum = 0, kepN = 0;
-    const statusCount = {};
+    let lastEpoch = null, lastDet = null;
     Object.values(nodes).forEach((node) => {
       Object.entries(node?.daily_reports || {}).forEach(([dk, rep]) => {
         if (rep && typeof rep === "object" && filter(dk, rep)) {
@@ -110,23 +120,26 @@ export async function buildTextSummaries(cctvId, period = "harian") {
           sum.bus += d.bus || 0;
           sum.truk += d.truk || 0;
           total += rep?.total_hari_ini || 0;
+          // Kepadatan terukur per detik (kepadatan_terakhir_persen diperbarui
+          // AI server ~setiap 5 detik selama deteksi berjalan).
           if (rep?.kepadatan_terakhir_persen != null) {
             kepSum += Number(rep.kepadatan_terakhir_persen);
             kepN += 1;
           }
-          if (rep?.status_terakhir) statusCount[rep.status_terakhir] = (statusCount[rep.status_terakhir] || 0) + 1;
+          const ld = rep?.last_detection;
+          const le = detToEpoch(ld);
+          if (le != null && (lastEpoch == null || le > lastEpoch)) {
+            lastEpoch = le;
+            lastDet = ld;
+          }
         }
       });
     });
-    const kepadatan = kepN ? Math.round(kepSum / kepN) : null;
-    let status = null;
-    const statusKeys = Object.keys(statusCount);
-    if (statusKeys.length) {
-      status = statusKeys.sort((a, b) => statusCount[b] - statusCount[a])[0];
-    } else if (kepadatan != null) {
-      status = kepadatan < 30 ? "Lancar" : kepadatan < 55 ? "Padat" : "Macet";
-    }
-    return { total, ...sum, kepadatan, status };
+    // Kepadatan & status hanya untuk tampilan per CCTV. Saat "Semua CCTV",
+    // cukup data jumlah kendaraan saja (kepadatan = null).
+    const kepadatan = cctvId && kepN ? Math.round(kepSum / kepN) : null;
+    const status = kepadatan != null ? (kepadatan < 30 ? "Lancar" : kepadatan < 55 ? "Padat" : "Macet") : null;
+    return { total, ...sum, kepadatan, status, lastDet: cctvId ? lastDet : null };
   };
 
   const rows = [];

@@ -312,6 +312,7 @@ export default function AdminDashboard() {
   const isOnline = server.status === "ONLINE";
   const stability = server.stability ?? 99.5;
   const serverColor = isOnline ? signalColor(stability) : "#FF5252";
+  const showDensity = chartId !== "all";
 
   const renderSignalBar = (s) => {
     const val = s.online ? Number(s.signal) || 0 : 0;
@@ -525,8 +526,12 @@ export default function AdminDashboard() {
                 <th className="text-center">Motor</th>
                 <th className="text-center">Bus</th>
                 <th className="text-center">Truk</th>
-                <th className="text-center">Kepadatan</th>
-                <th className="text-center" title="Status dominan lalu lintas periode tersebut (dari status laporan harian CCTV / kepadatan rata-rata)">Status <i className="bi bi-info-circle ms-1" style={{ fontSize: "0.7rem" }}></i></th>
+                {showDensity && (
+                  <>
+                    <th className="text-center">Kepadatan</th>
+                    <th className="text-center" title="Status dari kepadatan terukur per detik (Lancar <30%, Padat 30-54%, Macet ≥55%)">Status <i className="bi bi-info-circle ms-1" style={{ fontSize: "0.7rem" }}></i></th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -538,16 +543,23 @@ export default function AdminDashboard() {
                   <td className="text-center text-muted">{r.motor.toLocaleString("id-ID")}</td>
                   <td className="text-center text-muted">{r.bus.toLocaleString("id-ID")}</td>
                   <td className="text-center text-muted">{r.truk.toLocaleString("id-ID")}</td>
-                  <td className="text-center">{r.kepadatan != null ? `${r.kepadatan}%` : "-"}</td>
-                  <td className="text-center">
-                    {r.status ? (
-                      <span className={`traffic-pill ${trafficPillClass(r.status)}`}><span className="t-dot"></span>{r.status}</span>
-                    ) : "-"}
-                  </td>
+                  {showDensity && (
+                    <>
+                      <td className="text-center" title={r.lastDet ? `Kepadatan ${r.kepadatan != null ? `${r.kepadatan}%` : "-"} • deteksi terakhir ${r.lastDet}` : "Belum ada data deteksi"}>
+                        <div>{r.kepadatan != null ? `${r.kepadatan}%` : "-"}</div>
+                        {r.lastDet ? <div className="text-muted" style={{ fontSize: "0.62rem", fontWeight: 400 }}>{fmtDetTime(r.lastDet)}</div> : null}
+                      </td>
+                      <td className="text-center">
+                        {r.status ? (
+                          <span className={`traffic-pill ${trafficPillClass(r.status)}`}><span className="t-dot"></span>{r.status}</span>
+                        ) : "-"}
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
               {!textData.length && (
-                <tr><td colSpan={8} className="text-center text-muted py-3">Belum ada data pada periode ini.</td></tr>
+                <tr><td colSpan={showDensity ? 8 : 6} className="text-center text-muted py-3">Belum ada data pada periode ini.</td></tr>
               )}
             </tbody>
             {textData.length > 0 && (
@@ -558,13 +570,18 @@ export default function AdminDashboard() {
                   {["mobil", "motor", "bus", "truk"].map((k) => (
                     <td key={k} className="text-center">{textData.reduce((a, r) => a + (r[k] || 0), 0).toLocaleString("id-ID")}</td>
                   ))}
-                  <td className="text-center text-muted" title="Rata-rata kepadatan seluruh periode">
-                    {(() => {
-                      const rows = textData.filter((r) => r.kepadatan != null);
-                      return rows.length ? `${Math.round(rows.reduce((a, r) => a + r.kepadatan, 0) / rows.length)}%` : "-";
-                    })()}
-                  </td>
-                  <td className="text-center">-</td>
+                  {showDensity && (
+                    <>
+                      <td className="text-center text-muted" title={latestDet(textData) ? `Deteksi terakhir ${latestDet(textData)}` : "Belum ada data deteksi"}>
+                        <div>{(() => {
+                          const rows = textData.filter((r) => r.kepadatan != null);
+                          return rows.length ? `${Math.round(rows.reduce((a, r) => a + r.kepadatan, 0) / rows.length)}%` : "-";
+                        })()}</div>
+                        {latestDet(textData) ? <div style={{ fontSize: "0.62rem", fontWeight: 400 }}>{fmtDetTime(latestDet(textData))}</div> : null}
+                      </td>
+                      <td className="text-center">-</td>
+                    </>
+                  )}
                 </tr>
               </tfoot>
             )}
@@ -577,11 +594,11 @@ export default function AdminDashboard() {
             <div className="text-summary-mobile-card" key={r.label}>
               <div className="text-summary-mobile-head">
                 <span className="text-summary-mobile-label">{r.label}</span>
-                {r.status ? (
-                  <span className={`traffic-pill ${trafficPillClass(r.status)}`} title="Status dominan lalu lintas periode ini"><span className="t-dot"></span>{r.status}</span>
+                {showDensity && (r.status ? (
+                  <span className={`traffic-pill ${trafficPillClass(r.status)}`} title="Status dari kepadatan terukur per detik"><span className="t-dot"></span>{r.status}</span>
                 ) : (
                   <span className="text-muted small fw-bold">-</span>
-                )}
+                ))}
               </div>
               <div className="text-summary-mobile-grid">
                 <div className="text-summary-mobile-cell">
@@ -600,14 +617,17 @@ export default function AdminDashboard() {
                   <span className="tsm-value">{r.bus.toLocaleString("id-ID")}</span>
                   <span className="tsm-label">Bus</span>
                 </div>
-                <div className="text-summary-mobile-cell">
+                <div className={`text-summary-mobile-cell ${showDensity ? "" : "tsm-wide"}`}>
                   <span className="tsm-value">{r.truk.toLocaleString("id-ID")}</span>
                   <span className="tsm-label">Truk</span>
                 </div>
-                <div className="text-summary-mobile-cell">
-                  <span className="tsm-value">{r.kepadatan != null ? `${r.kepadatan}%` : "-"}</span>
-                  <span className="tsm-label">Kepadatan</span>
-                </div>
+                {showDensity && (
+                  <div className="text-summary-mobile-cell" title={r.lastDet ? `Kepadatan ${r.kepadatan != null ? `${r.kepadatan}%` : "-"} • deteksi terakhir ${r.lastDet}` : "Belum ada data deteksi"}>
+                    <span className="tsm-value">{r.kepadatan != null ? `${r.kepadatan}%` : "-"}</span>
+                    {r.lastDet ? <span className="tsm-sub" style={{ color: "#93c5fd" }}>{fmtDetTime(r.lastDet)}</span> : null}
+                    <span className="tsm-label">Kepadatan</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -638,13 +658,16 @@ export default function AdminDashboard() {
                   <span className="tsm-value">{textData.reduce((a, r) => a + (r.truk || 0), 0).toLocaleString("id-ID")}</span>
                   <span className="tsm-label">Truk</span>
                 </div>
-                <div className="text-summary-mobile-cell">
-                  <span className="tsm-value">{(() => {
-                    const rows = textData.filter((r) => r.kepadatan != null);
-                    return rows.length ? `${Math.round(rows.reduce((a, r) => a + r.kepadatan, 0) / rows.length)}%` : "-";
-                  })()}</span>
-                  <span className="tsm-label">Rata-rata Kepadatan</span>
-                </div>
+                {showDensity && (
+                  <div className="text-summary-mobile-cell" title={latestDet(textData) ? `Deteksi terakhir ${latestDet(textData)}` : "Belum ada data deteksi"}>
+                    <span className="tsm-value">{(() => {
+                      const rows = textData.filter((r) => r.kepadatan != null);
+                      return rows.length ? `${Math.round(rows.reduce((a, r) => a + r.kepadatan, 0) / rows.length)}%` : "-";
+                    })()}</span>
+                    {latestDet(textData) ? <span className="tsm-sub" style={{ color: "#93c5fd" }}>{fmtDetTime(latestDet(textData))}</span> : null}
+                    <span className="tsm-label">Rata-rata Kepadatan</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -913,6 +936,20 @@ function fmtDetTime(s) {
   if (!s) return "-";
   const m = String(s).match(/(\d{2}):(\d{2}):(\d{2})/);
   return m ? m[0] : String(s);
+}
+
+// Ambil waktu deteksi paling akhir dari kumpulan baris ringkasan (format DD-MM-YYYY HH:MM:SS).
+function latestDet(rows) {
+  let best = null;
+  (rows || []).forEach((r) => {
+    const m = String(r.lastDet).match(/(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+    if (!m) return;
+    const e = Date.UTC(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +m[6]);
+    if (!best) { best = r.lastDet; return; }
+    const b = String(best).match(/(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+    if (b && e > Date.UTC(+b[3], +b[2] - 1, +b[1], +b[4], +b[5], +b[6])) best = r.lastDet;
+  });
+  return best;
 }
 
 function wibToEpoch(s) {
