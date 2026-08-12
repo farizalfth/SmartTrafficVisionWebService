@@ -40,8 +40,8 @@ const ZONES = {
 
 function toEmbedUrl(url) {
   if (!url) return "";
-  if (url.includes("watch?v=")) return `https://www.youtube.com/embed/${url.split("watch?v=")[1]}`;
-  return url;
+  const m = url.match(/(?:v=|live\/|youtu\.be\/)([\w-]{11})/);
+  return m ? `https://www.youtube.com/embed/${m[1]}` : url;
 }
 
 // Warna sinyal: hijau (bagus), kuning (cukup), merah (buruk/off)

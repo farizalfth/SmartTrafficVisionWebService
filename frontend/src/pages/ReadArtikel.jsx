@@ -1,20 +1,39 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Reveal from "../components/Reveal";
 import { getArticles, imageUrl } from "../lib/firebase";
 
+const PINNED_IDS = [1, 6];
+const WEB_PER_PAGE = 2;
+const MOBILE_PER_SLIDE = 3;
+
 export default function ReadArtikel() {
   const [artikel, setArtikel] = useState([]);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [slideIdx, setSlideIdx] = useState(0);
+  const sliderRef = useRef(null);
 
   useEffect(() => {
     getArticles({ published: 1 }).then(setArtikel);
   }, []);
 
-  const filtered = useMemo(() => {
+  useEffect(() => {
+    setPage(1);
+    setSlideIdx(0);
+  }, [query]);
+
+  // Urutan: artikel ID 1 & 6 disematkan di depan (halaman 1), sisanya by tanggal terbaru.
+  const ordered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return artikel;
-    return artikel.filter((a) => (a.judul || "").toLowerCase().includes(q));
+    const list = q
+      ? artikel.filter((a) => (a.judul || "").toLowerCase().includes(q))
+      : artikel;
+    const pinned = list.filter((a) => PINNED_IDS.includes(Number(a.id)));
+    const rest = list
+      .filter((a) => !PINNED_IDS.includes(Number(a.id)))
+      .sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal)));
+    return [...pinned, ...rest];
   }, [artikel, query]);
 
   const totalViews = useMemo(
@@ -26,8 +45,31 @@ export default function ReadArtikel() {
     return formatDate([...artikel].sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal)))[0].tanggal);
   }, [artikel]);
 
-  const featured = filtered[0];
-  const rest = filtered.slice(1);
+  const totalPages = Math.max(1, Math.ceil(ordered.length / WEB_PER_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = ordered.slice((safePage - 1) * WEB_PER_PAGE, safePage * WEB_PER_PAGE);
+
+  const slides = useMemo(() => {
+    const out = [];
+    for (let i = 0; i < ordered.length; i += MOBILE_PER_SLIDE) {
+      out.push(ordered.slice(i, i + MOBILE_PER_SLIDE));
+    }
+    return out;
+  }, [ordered]);
+
+  const goSlide = (i) => {
+    const el = sliderRef.current;
+    if (!el) return;
+    const n = Math.max(0, Math.min(slides.length - 1, i));
+    el.scrollTo({ left: n * el.clientWidth, behavior: "smooth" });
+  };
+
+  const onSliderScroll = () => {
+    const el = sliderRef.current;
+    if (!el) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    if (i !== slideIdx) setSlideIdx(i);
+  };
 
   return (
     <div className="container" style={{ paddingBottom: 50 }}>
@@ -68,91 +110,171 @@ export default function ReadArtikel() {
         </div>
       </Reveal>
 
-      {filtered.length === 0 ? (
+      {ordered.length === 0 ? (
         <div className="text-center text-muted py-5">
           <i className="bi bi-file-earmark-x" style={{ fontSize: 48 }}></i>
           <p className="mt-3">{artikel.length ? "Artikel tidak ditemukan. Coba kata kunci lain." : "Belum ada artikel yang dipublikasikan."}</p>
         </div>
       ) : (
         <>
-          {/* FEATURED */}
-          <Reveal>
-            <div className="article-featured mb-4">
-              <Link to={`/artikel/${featured.id}`} className="article-featured-inner">
-                <div className="article-featured-img-wrap">
-                  <img src={imageUrl(featured.gambar)} alt="" />
-                  <span className="article-featured-badge">
-                    <i className="bi bi-stars me-1"></i>Terbaru
-                  </span>
-                </div>
-                <div className="article-featured-content">
-                  <span className="badge rounded-pill mb-2" style={{ background: "rgba(59,130,246,0.15)", color: "#3B82F6" }}>
-                    <i className="bi bi-newspaper me-1"></i>Artikel Unggulan
-                  </span>
-                  <h3 className="article-featured-title">{featured.judul}</h3>
-                  <p className="text-muted" style={{ fontSize: "0.95rem", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                    {stripHtml(featured.isi).slice(0, 220)}
-                  </p>
-                  <div className="d-flex flex-wrap gap-2 mt-2">
-                    <Chip icon="bi-calendar3" text={formatDate(featured.tanggal)} />
-                    <Chip icon="bi-clock" text={readTimeOf(featured.isi)} />
-                    <Chip icon="bi-eye" text={`${Number(featured.views || 0).toLocaleString("id-ID")} dilihat`} />
-                  </div>
-                  <span className="article-featured-cta">
-                    Baca Selengkapnya <i className="bi bi-arrow-right"></i>
-                  </span>
-                </div>
-              </Link>
-            </div>
-          </Reveal>
-
-          {/* GRID */}
-          {rest.length > 0 && (
+          {/* WEB / TABLET: grid 2 per halaman + pagination (≥768px) */}
+          <div className="d-none d-md-block">
             <div className="row g-4">
-              {rest.map((item, i) => (
-                <div className="col-lg-4 col-md-6 d-flex align-items-stretch" key={item.key}>
+              {pageItems.map((item, i) => (
+                <div className="col-md-6 d-flex align-items-stretch" key={item.key}>
                   <Reveal className="w-100" threshold={0.1}>
-                    <Link to={`/artikel/${item.id}`} className="article-card">
-                      <div style={{ overflow: "hidden", height: 200 }}>
-                        <img src={imageUrl(item.gambar)} alt="" className="article-thumb" style={{ transition: "transform 0.4s" }} />
-                      </div>
-                      <div style={{ padding: "18px 20px" }}>
-                        <div className="article-date mb-2 d-flex align-items-center justify-content-between">
-                          <span>
-                            <i className="bi bi-calendar3 me-1" style={{ fontSize: 14 }}></i>
-                            {formatDate(item.tanggal)}
-                          </span>
-                          <span style={{ color: "#2563EB", fontSize: 13 }}>
-                            <i className="bi bi-eye me-1"></i>{Number(item.views || 0).toLocaleString("id-ID")}
-                          </span>
-                        </div>
-                        <h5 className="article-title" style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}>{item.judul}</h5>
-                        <p className="text-muted mt-2 mb-2" style={{ fontSize: "0.88rem", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                          {stripHtml(item.isi).slice(0, 120)}
-                        </p>
-                        <div className="d-flex align-items-center justify-content-between">
-                          <span style={{ color: "#2563EB", fontWeight: 600, fontSize: "0.9rem" }}>
-                            Baca Selengkapnya <i className="bi bi-arrow-right"></i>
-                          </span>
-                          <span className="read-time-chip">
-                            <i className="bi bi-clock"></i> {readTimeOf(item.isi)}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
+                    <BannerCard item={item} first={safePage === 1 && i === 0} />
                   </Reveal>
                 </div>
               ))}
             </div>
-          )}
+
+            {totalPages > 1 && (
+              <div className="read-pagination">
+                <button
+                  className="read-page-btn"
+                  disabled={safePage === 1}
+                  onClick={() => setPage(safePage - 1)}
+                >
+                  <i className="bi bi-chevron-left"></i> Sebelumnya
+                </button>
+                <div className="read-page-nums">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      className={`read-page-num${p === safePage ? " active" : ""}`}
+                      onClick={() => setPage(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="read-page-btn"
+                  disabled={safePage === totalPages}
+                  onClick={() => setPage(safePage + 1)}
+                >
+                  Selanjutnya <i className="bi bi-chevron-right"></i>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* MOBILE: slider 3 per slide (≤767px) */}
+          <div className="d-md-none">
+            <div className="read-slider" ref={sliderRef} onScroll={onSliderScroll}>
+              {slides.map((group, gi) => (
+                <div className="read-slide-item" key={gi}>
+                  {group.map((item) => (
+                    <SmallCard key={item.key} item={item} />
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            {slides.length > 1 && (
+              <div className="read-slide-nav">
+                <button
+                  className="read-slide-btn"
+                  onClick={() => goSlide(slideIdx - 1)}
+                  disabled={slideIdx === 0}
+                  aria-label="Slide sebelumnya"
+                >
+                  <i className="bi bi-chevron-left"></i>
+                </button>
+                <div className="read-slide-dots">
+                  {slides.map((_, i) => (
+                    <button
+                      key={i}
+                      className={`read-slide-dot${i === slideIdx ? " active" : ""}`}
+                      onClick={() => goSlide(i)}
+                      aria-label={`Slide ${i + 1}`}
+                    />
+                  ))}
+                </div>
+                <button
+                  className="read-slide-btn"
+                  onClick={() => goSlide(slideIdx + 1)}
+                  disabled={slideIdx === slides.length - 1}
+                  aria-label="Slide berikutnya"
+                >
+                  <i className="bi bi-chevron-right"></i>
+                </button>
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>
+  );
+}
+
+function BannerCard({ item, first }) {
+  return (
+    <Link to={`/artikel/${item.id}`} className="article-featured w-100" style={{ display: "block", height: "100%" }}>
+      <div className="article-featured-inner">
+        <div className="article-featured-img-wrap">
+          <img src={imageUrl(item.gambar)} alt="" />
+          {first && (
+            <span className="article-featured-badge">
+              <i className="bi bi-stars me-1"></i>Terbaru
+            </span>
+          )}
+        </div>
+        <div className="article-featured-content">
+          <span className="badge rounded-pill mb-2" style={{ background: "rgba(59,130,246,0.15)", color: "#3B82F6" }}>
+            <i className="bi bi-newspaper me-1"></i>Artikel Unggulan
+          </span>
+          <h3 className="article-featured-title">{item.judul}</h3>
+          <p className="text-muted" style={{ fontSize: "0.95rem", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+            {stripHtml(item.isi).slice(0, 220)}
+          </p>
+          <div className="d-flex flex-wrap gap-2 mt-2">
+            <Chip icon="bi-calendar3" text={formatDate(item.tanggal)} />
+            <Chip icon="bi-clock" text={readTimeOf(item.isi)} />
+            <Chip icon="bi-eye" text={`${Number(item.views || 0).toLocaleString("id-ID")} dilihat`} />
+          </div>
+          <span className="article-featured-cta">
+            Baca Selengkapnya <i className="bi bi-arrow-right"></i>
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function SmallCard({ item }) {
+  return (
+    <Link to={`/artikel/${item.id}`} className="article-card" style={{ display: "block", height: "100%" }}>
+      <div style={{ overflow: "hidden", height: 110 }}>
+        <img src={imageUrl(item.gambar)} alt="" className="article-thumb" style={{ height: 110, transition: "transform 0.4s" }} />
+      </div>
+      <div style={{ padding: "13px 15px" }}>
+        <div className="article-date mb-2 d-flex align-items-center justify-content-between">
+          <span>
+            <i className="bi bi-calendar3 me-1" style={{ fontSize: 12 }}></i>
+            {formatDate(item.tanggal)}
+          </span>
+          <span style={{ color: "#2563EB", fontSize: 12 }}>
+            <i className="bi bi-eye me-1"></i>{Number(item.views || 0).toLocaleString("id-ID")}
+          </span>
+        </div>
+        <h5 className="article-title" style={{ fontSize: "0.95rem", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          {item.judul}
+        </h5>
+        <p className="text-muted mt-2 mb-2" style={{ fontSize: "0.78rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          {stripHtml(item.isi).slice(0, 80)}
+        </p>
+        <div className="d-flex align-items-center justify-content-between">
+          <span style={{ color: "#2563EB", fontWeight: 600, fontSize: "0.8rem" }}>
+            Baca <i className="bi bi-arrow-right"></i>
+          </span>
+          <span className="read-time-chip">
+            <i className="bi bi-clock"></i> {readTimeOf(item.isi)}
+          </span>
+        </div>
+      </div>
+    </Link>
   );
 }
 

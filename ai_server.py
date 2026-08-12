@@ -585,7 +585,7 @@ def measure_signal(cctv):
         return cached["signal"], cached["latency"], cached["online"]
 
     url = cctv.get("url") or cctv.get("youtube_link") or ""
-    m = re.search(r"(?:v=|youtu\.be/)([\w-]{11})", url or "")
+    m = re.search(r"(?:v=|live/|youtu\.be/)([\w-]{11})", url or "")
     if not m:
         result = (0.0, None, False)
     else:
