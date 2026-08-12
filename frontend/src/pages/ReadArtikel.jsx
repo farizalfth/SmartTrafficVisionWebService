@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import Reveal from "../components/Reveal";
 import { getArticles, imageUrl } from "../lib/firebase";
 
-const PINNED_IDS = [1, 6];
 const WEB_PER_PAGE = 2;
 const MOBILE_PER_SLIDE = 3;
 
@@ -23,17 +22,14 @@ export default function ReadArtikel() {
     setSlideIdx(0);
   }, [query]);
 
-  // Urutan: artikel ID 1 & 6 disematkan di depan (halaman 1), sisanya by tanggal terbaru.
+  // Urutan: tanggal terbaru di depan. Artikel pertama otomatis menjadi banner/artikel
+  // unggulan saat ada inputan artikel baru (tidak dikunci ID tertentu).
   const ordered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = q
       ? artikel.filter((a) => (a.judul || "").toLowerCase().includes(q))
       : artikel;
-    const pinned = list.filter((a) => PINNED_IDS.includes(Number(a.id)));
-    const rest = list
-      .filter((a) => !PINNED_IDS.includes(Number(a.id)))
-      .sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal)));
-    return [...pinned, ...rest];
+    return [...list].sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal)));
   }, [artikel, query]);
 
   const totalViews = useMemo(
