@@ -65,7 +65,7 @@ VEHICLE_CLASSES = [2, 3, 5, 7]
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="",
+    password="",    
     database="smart_traffic"
 )
 
